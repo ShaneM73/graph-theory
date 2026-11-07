@@ -2,6 +2,10 @@
 
 Course materials for the graph-algorithms unit of **CSC 325: Algorithms and Advanced Data Structures** (Missouri State University): study notes and **Graph Algorithms Lab**, an interactive 3D web app that walks through each algorithm step by step.
 
+### ▶ [Launch Graph Algorithms Lab](https://shanem73.github.io/graph-theory/)
+
+`https://shanem73.github.io/graph-theory/`
+
 ## Graph Algorithms Lab
 
 `index.html` is a single, self-contained page. Open it in any modern browser, or publish it with GitHub Pages (see below).
@@ -34,7 +38,7 @@ The page loads [three.js r128](https://threejs.org/) from cdnjs and fonts from G
 
 1. In the repository, open **Settings → Pages**.
 2. Under **Build and deployment**, choose **Deploy from a branch**, select `main` and `/ (root)`, and save.
-3. After a minute the app is live at `https://<your-username>.github.io/graph-theory/`.
+3. After a minute the app is live at [shanem73.github.io/graph-theory](https://shanem73.github.io/graph-theory/).
 
 ## Notes
 
