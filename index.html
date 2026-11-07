@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive 3D lessons on graph algorithms: BFS, DFS, topological sort, SCC, Kruskal, Prim, Bellman-Ford, DAG shortest paths, Dijkstra.">
+<title>Graph Algorithms Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+img{max-width:100%}
+/* Layout: a lab bench. Module rail on the left; a dark 3D "scope" with the step log and pseudocode beside it; live data structures underneath. */
+:root{
+  --bg:#ECEFF3; --surface:#FFFFFF; --surface-2:#F3F5F9; --ink:#131926; --muted:#5A6477; --line:#D5DBE4;
+  --accent:#C2410C; --accent-ink:#FFFFFF; --accent-soft:rgba(194,65,12,.10);
+  --stage:#0B1322; --stage-ink:#E6ECF5; --stage-muted:#8592AA;
+  --good:#1D8552; --good-soft:rgba(29,133,82,.12); --bad:#C2333B; --bad-soft:rgba(194,51,59,.11);
+  --hl:rgba(255,170,30,.24); --sel:#2B9FC4;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#090D14; --surface:#111723; --surface-2:#172030; --ink:#E4E9F1; --muted:#8E9AAF; --line:#243043;
+    --accent:#FF7A3D; --accent-ink:#1B0D04; --accent-soft:rgba(255,122,61,.14);
+    --stage:#070D18; --good:#4CC98A; --good-soft:rgba(76,201,138,.14); --bad:#FF6B72; --bad-soft:rgba(255,107,114,.14);
+    --hl:rgba(255,170,30,.17); --sel:#5CC8EA; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#090D14; --surface:#111723; --surface-2:#172030; --ink:#E4E9F1; --muted:#8E9AAF; --line:#243043;
+  --accent:#FF7A3D; --accent-ink:#1B0D04; --accent-soft:rgba(255,122,61,.14);
+  --stage:#070D18; --good:#4CC98A; --good-soft:rgba(76,201,138,.14); --bad:#FF6B72; --bad-soft:rgba(255,107,114,.14);
+  --hl:rgba(255,170,30,.17); --sel:#5CC8EA; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);-webkit-font-smoothing:antialiased}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);grid-template-areas:"top top" "rail main";gap:18px 24px;max-width:1520px;margin:0 auto;padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{grid-area:top;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.mark svg{display:block}
+.b1{font:800 1.35rem/1.1 var(--f-display);letter-spacing:-.01em}
+.b2{font-size:.8rem;color:var(--muted)}
+.score{font:600 .8rem var(--f-mono);padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-variant-numeric:tabular-nums}
+.score b{color:var(--accent)}
+
+.rail{grid-area:rail;align-self:start;position:sticky;top:16px;display:flex;flex-direction:column;gap:14px}
+.grp h5{margin:0 0 4px 10px;font:600 .66rem var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.grp div{display:flex;flex-direction:column;gap:2px}
+.rail button{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;text-align:left;border:0;background:transparent;color:var(--ink);padding:7px 10px;border-radius:8px;font:500 .9rem var(--f-body);cursor:pointer}
+.rail button small{font:500 .68rem var(--f-mono);color:var(--muted);white-space:nowrap}
+.rail button:hover{background:var(--surface)}
+.rail button[aria-current="true"]{background:var(--ink);color:var(--bg)}
+.rail button[aria-current="true"] small{color:inherit;opacity:.75}
+
+.main{grid-area:main;min-width:0;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font:600 .7rem var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+h1{font:800 clamp(1.75rem,3.2vw,2.5rem)/1.05 var(--f-display);margin:4px 0 8px;letter-spacing:-.02em;text-wrap:balance}
+.idea{margin:0;max-width:70ch;font-size:1.02rem}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.fact{display:flex;gap:8px;align-items:baseline;border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 10px;font-size:.82rem}
+.fact span{color:var(--muted)}
+.fact b{font:600 .82rem var(--f-mono)}
+.exs{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px}
+.exs>span{font:600 .68rem var(--f-mono);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-right:4px}
+.exs button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px;font:500 .86rem var(--f-body);cursor:pointer}
+.exs button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.exnote{margin:8px 0 0;color:var(--muted);font-size:.9rem;max-width:76ch}
+
+.work{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(310px,1fr);gap:18px;align-items:start}
+.stage-col{min-width:0;display:flex;flex-direction:column;gap:10px}
+.stage{position:relative;height:clamp(390px,60vh,640px);border-radius:14px;overflow:hidden;background:var(--stage);color:var(--stage-ink)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
+.stage canvas:active{cursor:grabbing}
+.labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.nlab{position:absolute;left:0;top:0;text-align:center;white-space:nowrap;line-height:1.15}
+.nlab .nm{display:block;font:600 12.5px var(--f-mono);color:#E8EEF7;text-shadow:0 1px 3px rgba(0,0,0,.95)}
+.nlab .sb{display:inline-block;margin-top:2px;font:500 11px var(--f-mono);color:#FFD592;background:rgba(8,14,26,.84);border:1px solid rgba(140,154,179,.3);border-radius:5px;padding:0 5px}
+.nlab .sb[hidden],[hidden]{display:none!important}
+.elab{position:absolute;left:0;top:0;font:600 11px var(--f-mono);padding:0 4px;border-radius:4px;background:rgba(8,14,26,.8);color:#AEBEDA;white-space:nowrap}
+.elab.s-tree,.elab.s-T{color:#5FE3D3}.elab.s-B{color:#FF8A8A}.elab.s-F{color:#C8B6FF}.elab.s-C{color:#FFE066}
+.elab.s-consider{color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.7)}.elab.s-improve{color:#8CF0A0;box-shadow:0 0 0 1px rgba(140,240,160,.6)}
+.elab.s-reject{color:#FF8A8A;text-decoration:line-through}.elab.s-cand{color:#FFC14D}.elab.s-cut{color:#C9A35E}
+.elab.s-dim{opacity:.45}.elab.s-bad{color:#FF6B78;box-shadow:0 0 0 1px rgba(255,107,120,.7)}.elab.s-cycle{color:#FFA8A8}
+.hint{position:absolute;left:12px;top:10px;font:500 11px var(--f-mono);color:var(--stage-muted);pointer-events:none}
+.viewbtns{position:absolute;right:10px;top:8px;display:flex;gap:6px}
+.viewbtns button{background:rgba(255,255,255,.07);color:var(--stage-ink);border:1px solid rgba(255,255,255,.16);border-radius:7px;padding:4px 9px;font:500 12px var(--f-mono);cursor:pointer;min-width:30px}
+.viewbtns button:hover{background:rgba(255,255,255,.14)}
+.viewbtns button[aria-pressed="true"]{background:rgba(255,170,30,.2);border-color:rgba(255,170,30,.55)}
+.nogl{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:var(--stage-muted)}
+
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.cbtns{display:flex;gap:6px}
+.controls button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 12px;font:600 .85rem var(--f-body);cursor:pointer;white-space:nowrap}
+.controls button:hover:not(:disabled){border-color:var(--accent)}
+.controls button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.controls button:disabled{opacity:.4;cursor:default}
+#scrub{flex:1 1 140px;min-width:110px;accent-color:var(--accent)}
+.stepct{font:600 .8rem var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums;min-width:5.6em}
+.sel,.tog{display:flex;gap:6px;align-items:center;font-size:.82rem;color:var(--muted);cursor:pointer}
+.tog input{accent-color:var(--accent);width:16px;height:16px}
+select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:4px 6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.78rem;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:6px}
+.lg i{display:inline-block;flex:none}
+.lg .ln{width:22px;height:4px;border-radius:2px}
+.lg .nd{width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.lg .rg{width:13px;height:13px;border-radius:50%;border:2.5px solid;background:#252D3C}
+
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.card-h{font:600 .68rem var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.card-h span{text-transform:none;letter-spacing:0;font-family:var(--f-body);font-weight:400}
+.narr{min-height:220px}
+.narr h3{font:700 1.18rem/1.25 var(--f-display);margin:6px 0 6px;text-wrap:balance}
+.narr p{margin:0 0 8px}
+.nmeta{display:flex;gap:10px;flex-wrap:wrap;font:600 .68rem var(--f-mono);color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+.nmeta .phase{color:var(--accent)}
+.why{background:var(--surface-2);border-radius:8px;padding:9px 11px;margin-top:10px;font-size:.92rem}
+.why b.wl{display:block;font:600 .66rem var(--f-mono);text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin-bottom:2px}
+.vx{font:600 .9em var(--f-mono);padding:0 4px;border-radius:4px;background:var(--surface-2);white-space:nowrap}
+.why .vx{background:var(--surface)}
+.ask{margin-top:12px;border:1.5px dashed var(--accent);border-radius:10px;padding:10px 12px}
+.ask.shake{animation:shake .4s}
+.ask-h{font:600 .66rem var(--f-mono);text-transform:uppercase;letter-spacing:.09em;color:var(--accent)}
+.ask p.q{margin:4px 0 0;font-weight:500}
+.opts{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.opt{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:8px;padding:6px 11px;font:500 .86rem var(--f-body);cursor:pointer}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt:disabled{cursor:default}
+.opt.right{background:var(--good-soft);border-color:var(--good);color:var(--good);font-weight:600}
+.opt.wrong{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.fb{margin:8px 0 0;font-size:.9rem}
+.fb b.ok{color:var(--good)} .fb b.no{color:var(--bad)}
+.ask-hint{font-size:.8rem;color:var(--muted);margin:6px 0 0}
+@keyframes shake{20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+.code{font:12.8px/1.65 var(--f-mono);max-height:360px;overflow:auto;position:relative}
+.cl{display:flex;gap:10px;padding:0 6px;border-radius:5px;white-space:pre;transition:background .2s}
+.cl .ln{color:var(--muted);width:1.7em;text-align:right;flex:none;user-select:none}
+.cl.hd{font-weight:600;margin-top:8px;padding-left:6px}
+.cl.hd:first-child{margin-top:0}
+.cl.on{background:var(--hl)}
+.cl .cm{color:var(--muted)}
+.cl .kw{color:var(--accent);font-weight:600}
+.cmp{border-collapse:collapse;width:100%;font-size:.86rem}
+.cmp th,.cmp td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.cmp th{font:600 .68rem var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.cmp td b{font:600 .84rem var(--f-mono)}
+
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+.ds{min-width:0}
+.ds h4{margin:0 0 8px;font:700 .95rem var(--f-display)}
+.dim{color:var(--muted);font-weight:400;font-family:var(--f-body);font-size:.85em}
+.ds-n{margin:8px 0 0;font-size:.8rem;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;flex-direction:column;align-items:center;min-width:44px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;background:var(--surface-2);font:600 .85rem var(--f-mono);line-height:1.3}
+.chip small{font:500 .7rem var(--f-mono);color:var(--muted)}
+.chip.curchip{border-color:var(--accent);background:var(--accent-soft)}
+.chip.new{border-color:var(--good);background:var(--good-soft)}
+.chip.done{opacity:.45}
+.empty{font-size:.85rem;color:var(--muted);font-style:italic}
+.tw{overflow-x:auto}
+.dt{border-collapse:collapse;width:100%;font:.84rem var(--f-mono);font-variant-numeric:tabular-nums}
+.dt th{font:600 .66rem var(--f-mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dt td{padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.dt tr.cur td{background:var(--hl)}
+.dt tr.ok td{color:var(--good)}
+.dt tr.no td{color:var(--bad)}
+.dt tr.bad td{background:var(--bad-soft);color:var(--bad)}
+[data-node].selx{box-shadow:inset 0 0 0 2px var(--sel)}
+tr[data-node].selx td:first-child{box-shadow:inset 3px 0 0 var(--sel)}
+.tag{display:inline-block;font:600 .64rem var(--f-mono);padding:1px 6px;border-radius:4px;letter-spacing:.04em}
+.t-white{background:#EEF2F7;color:#1B2230;box-shadow:inset 0 0 0 1px #C3CCD9}.t-gray{background:#8E99AB;color:#fff}.t-black{background:#252D3C;color:#fff}
+.chg{color:var(--accent);font-weight:700}
+
+.tl{display:flex;flex-direction:column;gap:3px;min-width:max-content}
+.tl-axis,.tl-row{display:grid;grid-template-columns:5.2em repeat(var(--T),18px);align-items:center}
+.tl-axis i{font:500 .62rem var(--f-mono);color:var(--muted);text-align:center;font-style:normal}
+.tl-n{font:600 .74rem var(--f-mono);grid-column:1;overflow:hidden;text-overflow:ellipsis}
+.tl-bar{height:14px;border-radius:4px;background:#5D6B84;font:600 .6rem var(--f-mono);color:#fff;padding-left:3px;line-height:14px;overflow:hidden}
+.tl-bar.open{background:repeating-linear-gradient(90deg,#8E99AB 0 6px,#A9B3C3 6px 9px)}
+.paren{font:600 .82rem var(--f-mono);margin:10px 0 0;word-spacing:.15em;color:var(--muted);overflow-wrap:anywhere}
+
+.al{display:flex;flex-direction:column;gap:5px}
+.al-row{display:flex;align-items:center;gap:0;border-radius:6px;padding:2px}
+.al-k{width:2.2em;height:28px;display:grid;place-items:center;font:600 .85rem var(--f-mono);border:1px solid var(--line);border-radius:6px 0 0 6px;background:var(--surface-2)}
+.al-cell{height:28px;display:grid;place-items:center;min-width:2.3em;padding:0 6px;font:600 .82rem var(--f-mono);border:1px solid var(--line);border-left:0;position:relative;margin-left:14px;border-left:1px solid var(--line);border-radius:5px;background:var(--surface)}
+.al-cell::before{content:"";position:absolute;right:100%;top:50%;width:14px;height:1.5px;background:var(--muted)}
+.al-nil{margin-left:8px;color:var(--muted);font:600 .85rem var(--f-mono)}
+.al-row.on{background:var(--hl)}
+.al-cell.hit{border-color:var(--accent);color:var(--accent)}
+.mx{border-collapse:collapse;font:.84rem var(--f-mono)}
+.mx th,.mx td{width:30px;height:28px;text-align:center;border:1px solid var(--line)}
+.mx th{color:var(--muted);font-weight:600;background:var(--surface-2)}
+.mx td{color:var(--muted)}
+.mx td.one{color:var(--ink);font-weight:700}
+.mx tr.on td,.mx tr.on th{background:var(--hl)}
+.mx th.on{background:var(--hl);color:var(--ink)}
+.mx td.colon{background:var(--hl)}
+.mx td.hit{outline:2px solid var(--accent);outline-offset:-2px;color:var(--accent)}
+.sets{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.sets li{display:flex;align-items:center;gap:8px;font:600 .84rem var(--f-mono)}
+.sets small{color:var(--muted);font-weight:500;margin-left:auto}
+.sw{width:12px;height:12px;border-radius:50%;flex:none}
+.comps{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:6px;font:600 .84rem var(--f-mono)}
+.comps li{display:flex;align-items:center;gap:8px}
+.ok-t{color:var(--good);font-weight:600}.bad-t{color:var(--bad);font-weight:600}
+
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.notes ul{margin:0;padding-left:18px}
+.notes li{margin:0 0 7px;max-width:70ch}
+
+@media (max-width:1100px){.work{grid-template-columns:minmax(0,1fr)}.narr{min-height:0}}
+@media (max-width:820px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "rail" "main";gap:14px}
+  .rail{position:static;flex-direction:row;overflow-x:auto;gap:14px;padding-bottom:6px}
+  .grp{flex:none}
+  .grp div{flex-direction:row}
+  .rail button{white-space:nowrap;width:auto}
+  .rail button small{display:none}
+  .notes{grid-template-columns:minmax(0,1fr)}
+  .stage{height:min(60vh,430px)}
+  .hint{display:none}
+  .cbtns{flex:1 1 100%}
+  .cbtns button{flex:1}
+}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg width="38" height="38" viewBox="0 0 38 38"><rect width="38" height="38" rx="9" fill="#0B1322"/><path d="M9 26 L19 10 L29 24 M9 26 L29 24" stroke="#5FE3D3" stroke-width="2" fill="none"/><circle cx="9" cy="26" r="4" fill="#EEF2F7"/><circle cx="19" cy="10" r="4" fill="#FFB020"/><circle cx="29" cy="24" r="4" fill="#2BB3A3"/></svg></span>
+      <div><div class="b1">Graph Algorithms Lab</div><div class="b2">CSC 325 · Algorithms and Advanced Data Structures</div></div>
+    </div>
+    <div class="score" id="score" title="Predictions answered correctly">Quiz <b>0</b> / 0 correct</div>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="Modules"></nav>
+
+  <main class="main">
+    <section class="lesson" id="lesson"></section>
+
+    <section class="work">
+      <div class="stage-col">
+        <div class="stage" id="stage">
+          <div class="labels" id="labels"></div>
+          <div class="hint">Drag to orbit · scroll to zoom · click a vertex</div>
+          <div class="viewbtns">
+            <button id="zin" aria-label="Zoom in">+</button>
+            <button id="zout" aria-label="Zoom out">−</button>
+            <button id="vreset">Reset view</button>
+            <button id="vspin" aria-pressed="true">Spin</button>
+          </div>
+        </div>
+        <div class="controls">
+          <div class="cbtns">
+            <button id="bFirst" title="Restart (Home)" aria-label="Restart">⏮</button>
+            <button id="bPrev" title="Previous step (←)">◀ Prev</button>
+            <button id="bPlay" title="Play / pause (Space)">▶ Play</button>
+            <button id="bNext" class="primary" title="Next step (→)">Next ▶</button>
+          </div>
+          <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Jump to step">
+          <span class="stepct" id="stepct">1 / 1</span>
+          <label class="sel" for="speed"><span>Speed</span><select id="speed"><option value="2400">Slow</option><option value="1400" selected>Normal</option><option value="650">Fast</option></select></label>
+          <label class="tog" for="quiz"><input type="checkbox" id="quiz" checked><span>Quiz me</span></label>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <aside class="side">
+        <div class="card narr" id="narr" aria-live="polite"></div>
+        <div class="card"><div class="card-h" id="codeH">Pseudocode</div><div class="code" id="code"></div></div>
+      </aside>
+    </section>
+
+    <section class="card"><div class="card-h">Data structures <span>Live state at this step. Click a row or a vertex to link them.</span></div><div id="panel"></div></section>
+
+    <section class="notes">
+      <div class="card"><div class="card-h">Key ideas</div><ul id="keys"></ul></div>
+      <div class="card"><div class="card-h">Exam traps</div><ul id="traps"></ul></div>
+    </section>
+  </main>
+</div>
+
+<script id="algos">
+/* ======================= Pure algorithm tracing (no DOM) ======================= */
+const FILL={white:0xEEF2F7,gray:0x8E99AB,black:0x252D3C,tree:0x2BB3A3,est:0xFFC98B,bad:0xF0525A};
+const SETS=[0x4DABF7,0xFF922B,0x51CF66,0xCC5DE8,0xFCC419,0xFF6B6B,0x20C997,0xA9E34B];
+const EST={
+  idle:{c:0x5A6A86,r:.045,o:.9},dim:{c:0x34425C,r:.035,o:.55},
+  tree:{c:0x3FD0C0,r:.085,o:1,g:.35},T:{c:0x3FD0C0,r:.085,o:1,g:.35},
+  B:{c:0xFF6B6B,r:.075,o:1,g:.3},F:{c:0xB197FC,r:.075,o:1,g:.3},C:{c:0xFFD43B,r:.075,o:1,g:.3},
+  consider:{c:0xFFFFFF,r:.1,o:1,g:.55},improve:{c:0x69DB7C,r:.11,o:1,g:.55},
+  reject:{c:0xFF5D5D,r:.05,o:.8},cycle:{c:0xFF9C9C,r:.085,o:1,g:.4},
+  cand:{c:0xFFB020,r:.08,o:1,g:.4},cut:{c:0xC9963A,r:.04,o:.75},bad:{c:0xFF4D5A,r:.11,o:1,g:.6}
+};
+const fillHex=f=>f&&f.startsWith('set')?SETS[(+f.slice(3))%SETS.length]:(FILL[f]!==undefined?FILL[f]:FILL.white);
+const hexCss=n=>'#'+n.toString(16).padStart(6,'0');
+const fillCss=f=>hexCss(fillHex(f));
+const fmt=x=>x===Infinity?'∞':x===-Infinity?'−∞':(x<0?'−'+(-x):String(x));
+const fw=w=>w<0?'('+fmt(w)+')':fmt(w);
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+function mkGraph(def){
+  const G={directed:!!def.directed,weighted:!!def.weighted,src:def.src||null,query:def.query,inQ:def.inQ,
+    nodes:def.nodes.map(([id,x,y,z,label])=>({id,p:[x,y,z],label:label||id})),
+    edges:def.edges.map(([u,v,w])=>({u,v,w}))};
+  G.idx={};G.nodes.forEach((n,i)=>G.idx[n.id]=i);
+  G.adj={};G.nodes.forEach(n=>G.adj[n.id]=[]);
+  G.edges.forEach((e,i)=>{G.adj[e.u].push({v:e.v,w:e.w,i});if(!G.directed&&e.u!==e.v)G.adj[e.v].push({v:e.u,w:e.w,i});});
+  Object.values(G.adj).forEach(a=>a.sort((x,y)=>G.idx[x.v]-G.idx[y.v]));
+  G.rev=new Set(G.edges.map(e=>e.u+'>'+e.v));
+  G.lbl=id=>G.nodes[G.idx[id]].label;
+  return G;
+}
+function transposeAdj(G){const A={};G.nodes.forEach(n=>A[n.id]=[]);G.edges.forEach((e,i)=>A[e.v].push({v:e.u,w:e.w,i}));Object.values(A).forEach(a=>a.sort((x,y)=>G.idx[x.v]-G.idx[y.v]));return A;}
+function topoOrder(G){const seen={},out=[];const vis=u=>{seen[u]=1;G.adj[u].forEach(a=>{if(!seen[a.v])vis(a.v);});out.unshift(u);};G.nodes.forEach(x=>{if(!seen[x.id])vis(x.id);});return out;}
+function bfDist(G,s){const d={};G.nodes.forEach(n=>d[n.id]=Infinity);d[s]=0;for(let k=1;k<G.nodes.length;k++)G.edges.forEach(e=>{if(d[e.u]+e.w<d[e.v])d[e.v]=d[e.u]+e.w;});return d;}
+const vx=G=>id=>`<span class="vx">${G.lbl(id)}</span>`;
+const ex=(G,i)=>`<span class="vx">(${G.lbl(G.edges[i].u)}, ${G.lbl(G.edges[i].v)})</span>`;
+const exT=(G,i)=>`(${G.lbl(G.edges[i].u)}, ${G.lbl(G.edges[i].v)})`;
+function lineLayout(order,gap){const n=order.length,P={};order.forEach((id,k)=>P[id]=[(k-(n-1)/2)*(gap||2.3),-0.6,0]);return P;}
+function pathStr(G,pi,s,v,d){if(d[v]===Infinity)return 'unreachable';const p=[];let x=v,g=0;while(x&&g++<50){p.unshift(G.lbl(x));if(x===s)break;x=pi[x];}return p.join(' → ');}
+
+class Rec{
+  constructor(G){this.G=G;this.steps=[];this.ns={};this.es={};this.pos=null;this.flip=false;this.arc=false;
+    G.nodes.forEach(n=>this.ns[n.id]={fill:'white',sub:''});
+    G.edges.forEach((e,i)=>this.es[i]={st:'idle',lab:G.weighted?fmt(e.w):''});}
+  snap(o){this.steps.push(Object.assign({},o,{nodes:clone(this.ns),edges:clone(this.es),pos:this.pos?clone(this.pos):null,flip:this.flip,arc:this.arc}));}
+  ask(a){const s=this.steps[this.steps.length-1];if(s&&!s.ask)s.ask=a;}
+}
+const H={
+  box:(t,inner,note)=>`<section class="ds"><h4>${t}</h4>${inner}${note?`<p class="ds-n">${note}</p>`:''}</section>`,
+  chips:(items,empty)=>items.length?`<div class="chips">${items.map(it=>`<span class="chip${it.cls?' '+it.cls:''}"${it.id?` data-node="${it.id}"`:''}><b>${it.t}</b>${it.s!=null?`<small>${it.s}</small>`:''}</span>`).join('')}</div>`:`<div class="empty">${empty||'empty'}</div>`,
+  table:(head,rows)=>`<div class="tw"><table class="dt"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr${r.id?` data-node="${r.id}"`:''}${r.cls?` class="${r.cls}"`:''}>${r.cells.map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`,
+  tag:c=>`<span class="tag t-${c}">${c.toUpperCase()}</span>`,
+  grid:(...b)=>`<div class="pgrid">${b.join('')}</div>`
+};
+const uniq=a=>[...new Set(a)];
+
+/* ---------- 1. Representation ---------- */
+function runRep(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),ids=G.nodes.map(x=>x.id),n=ids.length,m=G.edges.length;
+  const M={};ids.forEach(a=>{M[a]={};ids.forEach(b=>M[a][b]=0);});
+  G.edges.forEach(e=>{M[e.u][e.v]=1;if(!G.directed)M[e.v][e.u]=1;});
+  const adjL=(hu,hv)=>`<div class="al">${ids.map(u=>`<div class="al-row${u===hu?' on':''}" data-node="${u}"><span class="al-k">${lb(u)}</span>${G.adj[u].map(a=>`<span class="al-cell${a.v===hv&&u===hu?' hit':''}">${lb(a.v)}</span>`).join('')}<span class="al-nil">/</span></div>`).join('')}</div>`;
+  const mat=(hu,hv,col)=>`<div class="tw"><table class="mx"><thead><tr><th></th>${ids.map(b=>`<th class="${b===hv||b===col?'on':''}">${lb(b)}</th>`).join('')}</tr></thead><tbody>${ids.map(a=>`<tr data-node="${a}" class="${a===hu?'on':''}"><th>${lb(a)}</th>${ids.map(b=>`<td class="${M[a][b]?'one':''}${a===hu&&b===hv?' hit':''}${b===col?' colon':''}">${M[a][b]}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  const sumLen=ids.reduce((s,u)=>s+G.adj[u].length,0);
+  const P=(hu,hv,col)=>H.grid(H.box('Adjacency list <span class="dim">array of linked lists</span>',adjL(hu,hv),`List lengths add up to ${sumLen}${G.directed?' = |E|':' = 2|E|'}.`),H.box('Adjacency matrix <span class="dim">A[row][col]</span>',mat(hu,hv,col),`Always ${n} × ${n} = ${n*n} cells.`));
+  R.snap({title:`${G.directed?'A directed':'An undirected'} graph: |V| = ${n}, |E| = ${m}`,msg:`Below, this graph is stored two ways. Press <b>Next</b> to walk through the vertices and see one vertex's neighbors in each structure. Drag the 3D view to rotate it, and click a vertex to light up its row.`,why:G.directed?'In a directed graph, Adj[u] holds only the vertices that u points to, so each edge is stored exactly once.':'In an undirected graph, edge {u, v} is stored twice: v appears in Adj[u] and u appears in Adj[v].',panel:P()});
+  ids.forEach((u,k)=>{
+    const nb=G.adj[u];
+    let msg=G.directed?`Adj[${lb(u)}] = [${nb.map(a=>lb(a.v)).join(', ')||' '}]: the ${nb.length} vertex${nb.length===1?'':'es'} that ${V(u)} points to (out-degree ${nb.length}). Row ${lb(u)} of the matrix has a 1 in exactly those columns.`
+      :`Adj[${lb(u)}] = [${nb.map(a=>lb(a.v)).join(', ')}]: ${V(u)} has degree ${nb.length}. Row ${lb(u)} of the matrix has a 1 in exactly those columns.`;
+    if(G.edges.some(e=>e.u===u&&e.v===u))msg+=` ${V(u)} has a self-loop, so it appears in its own list and A[${lb(u)}][${lb(u)}] = 1 sits on the diagonal.`;
+    const why=!G.directed&&k===0?`Compare column ${lb(u)} with row ${lb(u)}: they match. An undirected graph's matrix is symmetric (A = Aᵀ), so half of it is redundant.`:(G.directed&&k===0?`Listing u's neighbors costs Θ(deg u) with a list but Θ(V) with a matrix, because you must read the whole row.`:null);
+    R.snap({title:`Neighbors of ${lb(u)}`,msg,why,focus:{n:[u],t:nb.map(a=>a.v),e:nb.map(a=>a.i)},panel:P(u)});
+  });
+  const [qu,qv]=G.query,has=M[qu][qv]===1;
+  const qi=G.edges.findIndex(e=>(e.u===qu&&e.v===qv)||(!G.directed&&e.u===qv&&e.v===qu));
+  R.snap({title:`Is (${lb(qu)}, ${lb(qv)}) an edge?`,msg:`<b>Matrix:</b> read the single cell A[${lb(qu)}][${lb(qv)}] = ${M[qu][qv]}. That's Θ(1). <b>List:</b> walk Adj[${lb(qu)}] comparing each entry with ${lb(qv)}: ${has?`found after ${G.adj[qu].findIndex(a=>a.v===qv)+1} comparison(s)`:`all ${G.adj[qu].length} entries checked, not found`}. That's O(deg ${lb(qu)}).`,focus:{n:[qu],t:[qv],e:qi>=0?[qi]:[]},panel:P(qu,qv)});
+  if(G.directed&&G.inQ){
+    const t=G.inQ,into=G.edges.filter(e=>e.v===t&&e.u!==t).map(e=>e.u);
+    R.snap({title:`Which vertices point into ${lb(t)}?`,msg:`Lists only store <i>outgoing</i> edges, so finding the edges into ${V(t)} means scanning every list: Θ(V + E). In the matrix, just read down column ${lb(t)}: ${into.map(V).join(', ')}. That's Θ(V).`,why:'This is why some algorithms (like the SCC algorithm) build the transpose Gᵀ: its lists are exactly the in-edges of G.',focus:{n:[t],t:into,e:G.edges.map((e,i)=>e.v===t&&e.u!==t?i:-1).filter(i=>i>=0)},panel:P(null,null,t)});
+  }
+  const possible=G.directed?n*n:n*(n-1)/2;
+  R.snap({title:'Which one uses less space?',msg:`Lists: ${n} heads + ${sumLen} list cells = Θ(V + E). Matrix: ${n*n} cells = Θ(V²), however many edges exist.`,why:`This graph has ${m} of ${possible} possible edges, so it's sparse. Sparse graphs (|E| ≪ |V|²) → adjacency lists. Dense graphs, or code that asks "is (u, v) an edge?" constantly → matrix.`,panel:P()});
+  return R.steps;
+}
+
+/* ---------- 2. BFS ---------- */
+function runBFS(G){
+  const R=new Rec(G),s=G.src||G.nodes[0].id,V=vx(G),lb=G.lbl;
+  const col={},d={},pi={},Q=[];
+  G.nodes.forEach(n=>{col[n.id]='white';d[n.id]=Infinity;pi[n.id]=null;R.ns[n.id].sub='d=∞';});
+  const P=cur=>H.grid(
+    H.box('Queue Q <span class="dim">front → back</span>',H.chips(Q.map((v,k)=>({t:lb(v),s:'d='+fmt(d[v]),id:v,cls:k===0?'curchip':''})),'Q is empty'),'Exactly the GRAY vertices, in the order they were discovered. Distances in Q never differ by more than 1.'),
+    H.box('Vertex attributes',H.table(['v','color','d','π'],G.nodes.map(n=>({id:n.id,cls:n.id===cur?'cur':'',cells:[n.label,H.tag(col[n.id]),fmt(d[n.id]),pi[n.id]?lb(pi[n.id]):'NIL']})))));
+  R.snap({line:[1,2],title:'Start: nothing is discovered yet',msg:`Every vertex begins <b>WHITE</b> with d = ∞ and π = NIL. The source is ${V(s)}. Watch BFS fan out in waves: first everything 1 edge away, then 2, then 3.`,why:`When BFS finishes, d[v] is the <i>fewest edges</i> on any path from ${lb(s)} to v.`,panel:P()});
+  col[s]='gray';d[s]=0;R.ns[s]={fill:'gray',sub:'d=0'};Q.push(s);
+  R.snap({line:[3,4],title:`Enqueue the source ${lb(s)}`,msg:`${V(s)} turns GRAY with d = 0 and is the only vertex in Q. GRAY means “discovered, but its neighbors haven't been scanned yet.”`,focus:{n:[s]},panel:P()});
+  let first=true;
+  while(Q.length){
+    if(Q.length>1)R.ask({q:'Which vertex will DEQUEUE return next?',opts:uniq(Q.slice(0,4).map(lb)).sort(),ans:lb(Q[0]),why:`Q is first-in, first-out. ${lb(Q[0])} has been waiting longest, so it leaves first. That's what keeps the waves in distance order.`});
+    const u=Q.shift();
+    R.snap({line:[5,6],title:`Dequeue ${lb(u)}`,msg:`${V(u)} leaves the front of Q (d = ${d[u]}). Now scan its adjacency list Adj[${lb(u)}] = [${G.adj[u].map(a=>lb(a.v)).join(', ')||' '}].`,focus:{n:[u]},panel:P(u)});
+    for(const {v,i} of G.adj[u]){
+      if(col[v]==='white'){
+        if(first&&G.adj[u].length){R.ask({q:`${lb(v)} is WHITE. What will d[${lb(v)}] become?`,opts:uniq([String(d[u]),String(d[u]+1),String(d[u]+2),'∞']),ans:String(d[u]+1),why:`d[v] = d[u] + 1: one more edge than the vertex it was reached from.`});first=false;}
+        col[v]='gray';d[v]=d[u]+1;pi[v]=u;Q.push(v);R.ns[v]={fill:'gray',sub:'d='+d[v]};R.es[i].st='tree';
+        R.snap({line:[8,9,10,11],title:`Discover ${lb(v)}`,msg:`${V(v)} is WHITE, so this is the first time BFS reaches it. Set d[${lb(v)}] = d[${lb(u)}] + 1 = ${d[v]} and π[${lb(v)}] = ${lb(u)}, color it GRAY, and put it at the back of Q.`,why:`(${lb(u)}, ${lb(v)}) becomes a tree edge. Every vertex already in Q has distance ${d[u]} or ${d[u]+1}, so ${lb(v)} correctly waits behind them.`,focus:{n:[u],t:[v],e:[i],est:'improve'},panel:P(u)});
+      }else{
+        R.snap({line:8,title:`${lb(v)} is already ${col[v].toUpperCase()}`,msg:`${V(v)} was discovered earlier with d = ${d[v]}. BFS never rediscovers a vertex: the first visit already used the fewest edges.`,focus:{n:[u],t:[v],e:[i]},panel:P(u)});
+      }
+    }
+    col[u]='black';R.ns[u].fill='black';
+    R.snap({line:12,title:`${lb(u)} is finished`,msg:`All of ${V(u)}'s neighbors have been examined, so it turns BLACK. ${Q.length?`Q now holds ${Q.map(lb).join(', ')}.`:'Q is now empty.'}`,focus:{n:[u]},panel:P(u)});
+  }
+  const unr=G.nodes.filter(n=>d[n.id]===Infinity).map(n=>n.id);
+  G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+  R.snap({line:5,title:'Q is empty: BFS is done',msg:`The highlighted edges form the <b>breadth-first tree</b>. Follow π back toward ${V(s)} from any vertex to read off a shortest path, e.g. ${pathStr(G,pi,s,G.nodes.filter(n=>d[n.id]<Infinity).sort((a,b)=>d[b.id]-d[a.id])[0].id,d)}. ${unr.length?`${unr.map(V).join(', ')} ${unr.length>1?'were':'was'} never reached, so d stays ∞.`:''}`,why:'Running time O(V + E): each vertex is enqueued and dequeued at most once, and each adjacency list is scanned once.',panel:P()});
+  const maxD=Math.max(...G.nodes.map(n=>d[n.id]).filter(x=>x<Infinity)),groups={};
+  G.nodes.forEach(n=>{const k=d[n.id]===Infinity?'u':d[n.id];(groups[k]=groups[k]||[]).push(n.id);});
+  R.pos={};
+  Object.entries(groups).forEach(([k,ids])=>{const L=k==='u'?maxD+1.3:+k;ids.forEach((id,j)=>R.pos[id]=[(L-maxD/2)*2.7,k==='u'?-2.4:0,(j-(ids.length-1)/2)*2.4]);});
+  R.snap({title:'Same graph, arranged by distance',msg:`Each vertex has moved to the column for its d value: 0, 1, 2, …. Tree edges always step from column k to column k + 1. The faint non-tree edges stay within a column or link neighboring columns. None of them skips a column.`,why:'If an edge skipped a column, it would be a shortcut, and BFS would have used it. This picture is the shortest-path property of BFS.',panel:P()});
+  return R.steps;
+}
+
+/* ---------- DFS engine shared by DFS, Topological sort, SCC ---------- */
+function typeAsk(lb,u,v){return {q:`DFS now examines edge (${lb(u)}, ${lb(v)}). What type is it?`,opts:['Tree edge','Back edge','Forward edge','Cross edge']};}
+function dfsRun(R,G,c){
+  const st={col:{},d:{},f:{},pi:{},time:0,stack:[],ev:[]};
+  G.nodes.forEach(n=>{st.col[n.id]='white';st.pi[n.id]=null;});
+  const adj=c.adj||G.adj,V=vx(G),lb=G.lbl;let asks=0;
+  const paint=c.paint||((u,ph)=>{R.ns[u].fill=ph==='d'?'gray':'black';R.ns[u].sub=st.d[u]+'/'+(st.f[u]||'');});
+  const visit=u=>{
+    st.time++;st.d[u]=st.time;st.col[u]='gray';st.stack.push(u);st.ev.push('('+lb(u));
+    paint(u,'d',st);
+    R.snap({line:c.lines.disc,phase:c.phase,title:`Discover ${lb(u)} (d = ${st.d[u]})`,msg:c.discMsg?c.discMsg(u,st):`time = ${st.d[u]}. ${V(u)} turns GRAY and goes on the call stack. Next: scan Adj[${lb(u)}] = [${adj[u].map(a=>lb(a.v)).join(', ')||' '}].`,focus:{n:[u]},panel:c.panel(st,u)});
+    adj[u].forEach(({v,i},k)=>{
+      const cv=st.col[v];
+      if(cv==='white'){
+        st.pi[v]=u;
+        if(c.classify){R.es[i].st='T';R.es[i].lab='T';}else R.es[i].st='tree';
+        if(c.detail)R.snap({line:c.lines.tree,phase:c.phase,title:`Tree edge (${lb(u)}, ${lb(v)})`,msg:`${V(v)} is WHITE, so (${lb(u)}, ${lb(v)}) is a <b>tree edge</b>. Set π[${lb(v)}] = ${lb(u)} and call DFS-VISIT(${lb(v)}). ${V(u)} stays GRAY and waits on the stack.`,focus:{n:[u],t:[v],e:[i],est:c.classify?'T':'tree'},panel:c.panel(st,u)});
+        visit(v);
+        if(c.detail&&k<adj[u].length-1)R.snap({line:c.lines.loop,phase:c.phase,title:`Back in ${lb(u)}`,msg:`DFS-VISIT(${lb(v)}) has returned. ${V(u)} is on top of the stack again and continues with the rest of its list: [${adj[u].slice(k+1).map(a=>lb(a.v)).join(', ')}].`,focus:{n:[u]},panel:c.panel(st,u)});
+      }else{
+        let type=null;
+        if(c.classify)type=cv==='gray'?'B':(st.d[u]<st.d[v]?'F':'C');
+        if(c.detail){
+          if(type&&c.asks&&asks<c.asks){const a=typeAsk(lb,u,v);a.ans={B:'Back edge',F:'Forward edge',C:'Cross edge'}[type];a.why=`${lb(v)} is ${cv.toUpperCase()}${cv==='black'?` and d[${lb(u)}] = ${st.d[u]} ${st.d[u]<st.d[v]?'<':'>'} d[${lb(v)}] = ${st.d[v]}`:''}. Rule: WHITE → tree, GRAY → back, BLACK with d[u] < d[v] → forward, BLACK with d[u] > d[v] → cross.`;R.ask(a);asks++;}
+          if(type){R.es[i].st=type;R.es[i].lab=type;}
+          let msg;
+          if(!type)msg=`${V(v)} is already ${cv.toUpperCase()}, so there is nothing new to explore along this edge.`;
+          else if(type==='B')msg=u===v?`(${lb(u)}, ${lb(u)}) is a self-loop. ${V(u)} is GRAY (it is the vertex being visited), so a self-loop is a <b>back edge</b>.`:`${V(v)} is GRAY: it is still on the call stack, so it is an ancestor of ${V(u)}. (${lb(u)}, ${lb(v)}) is a <b>back edge</b>, and back edges mean the graph has a cycle: ${lb(v)} ⇝ ${lb(u)} → ${lb(v)}.`;
+          else if(type==='F')msg=`${V(v)} is BLACK and d[${lb(u)}] = ${st.d[u]} < d[${lb(v)}] = ${st.d[v]}. ${lb(v)} was discovered and finished while ${lb(u)} was GRAY, so it is a descendant of ${lb(u)}. (${lb(u)}, ${lb(v)}) is a <b>forward edge</b>.`;
+          else msg=`${V(v)} is BLACK and d[${lb(u)}] = ${st.d[u]} > d[${lb(v)}] = ${st.d[v]}. ${lb(v)} was completely finished before ${lb(u)} was even discovered, so neither is an ancestor of the other. (${lb(u)}, ${lb(v)}) is a <b>cross edge</b>.`;
+          R.snap({line:c.lines.non,phase:c.phase,title:type?`${{B:'Back',F:'Forward',C:'Cross'}[type]} edge (${lb(u)}, ${lb(v)})`:`Skip (${lb(u)}, ${lb(v)})`,msg,focus:{n:[u],t:[v],e:[i],est:type||'consider'},panel:c.panel(st,u)});
+        }else if(type){R.es[i].st=type;R.es[i].lab=type;}
+      }
+    });
+    if(c.beforeFin)c.beforeFin(u,st);
+    st.time++;st.f[u]=st.time;st.col[u]='black';st.stack.pop();st.ev.push(lb(u)+')');
+    paint(u,'f',st);
+    if(c.onFinish)c.onFinish(u,st);
+    R.snap({line:c.lines.fin,phase:c.phase,title:`Finish ${lb(u)} (f = ${st.f[u]})`,msg:c.finMsg?c.finMsg(u,st):`Every edge out of ${V(u)} has been explored. time = ${st.f[u]}: record f[${lb(u)}] = ${st.f[u]}, color it BLACK, and pop it off the stack.`,focus:{n:[u]},panel:c.panel(st,u)});
+  };
+  c.order.forEach((u,k)=>{
+    if(st.col[u]!=='white')return;
+    if(c.onRoot)c.onRoot(u,st);
+    R.snap({line:c.lines.root,phase:c.phase,title:`Start a DFS tree at ${lb(u)}`,msg:c.rootMsg?c.rootMsg(u,st):`The main loop reaches ${V(u)} and finds it WHITE, so it calls DFS-VISIT(${lb(u)}). ${k===0?'':'This starts a <b>new tree</b> in the depth-first forest.'}`,why:c.rootWhy?c.rootWhy(u,st):null,focus:{n:[u]},panel:c.panel(st,u)});
+    visit(u);
+    if(c.afterTree)c.afterTree(u,st);
+  });
+  return st;
+}
+function timelineH(G,st,T){
+  const rows=G.nodes.filter(x=>st.d[x.id]).sort((a,b)=>st.d[a.id]-st.d[b.id]);
+  let h=`<div class="tw"><div class="tl" style="--T:${T}"><div class="tl-axis"><span></span>${Array.from({length:T},(_,k)=>`<i>${k+1}</i>`).join('')}</div>`;
+  rows.forEach(x=>{const d=st.d[x.id],f=st.f[x.id],e=f||st.time;h+=`<div class="tl-row" data-node="${x.id}"><span class="tl-n">${x.label}</span><span class="tl-bar${f?'':' open'}" style="grid-column:${d+1} / ${e+2}">${d}–${f||''}</span></div>`;});
+  return h+'</div></div>';
+}
+const emptySt=G=>({col:Object.fromEntries(G.nodes.map(x=>[x.id,'white'])),d:{},f:{},pi:{},stack:[],ev:[],time:0});
+
+/* ---------- 3. DFS ---------- */
+function runDFS(G){
+  const R=new Rec(G),n=G.nodes.length,lb=G.lbl;
+  const P=(st,cur)=>H.grid(
+    H.box('Call stack <span class="dim">bottom → top</span>',H.chips(st.stack.map((x,k)=>({t:lb(x),s:'d='+st.d[x],id:x,cls:k===st.stack.length-1?'curchip':''})),'stack is empty'),'Exactly the GRAY vertices. Each is waiting for a recursive call to return.'),
+    H.box('Timestamps',H.table(['v','color','d','f','π'],G.nodes.map(x=>({id:x.id,cls:x.id===cur?'cur':'',cells:[x.label,H.tag(st.col[x.id]),st.d[x.id]||'',st.f[x.id]||'',st.pi[x.id]?lb(st.pi[x.id]):'NIL']})))),
+    H.box('Parenthesis structure <span class="dim">[d, f] intervals</span>',timelineH(G,st,2*n)+`<p class="paren">${st.ev.join(' ')||'&nbsp;'}</p>`,'Write “(u” at d[u] and “u)” at f[u]. The result is always properly nested.'));
+  R.snap({line:[1,2,3],title:'Start: every vertex WHITE, time = 0',msg:'DFS has no single source. The main loop tries the vertices in order (a, b, c, …) and starts a new tree from any vertex that is still WHITE. Inside DFS-VISIT it always follows the first unexplored edge, going as deep as possible before backing up.',why:`Each vertex gets two timestamps: d when it's discovered and f when it finishes. 1 ≤ d[u] < f[u] ≤ 2|V| = ${2*n}.`,panel:P(emptySt(G))});
+  const st=dfsRun(R,G,{order:G.nodes.map(x=>x.id),classify:true,detail:true,asks:7,lines:{root:[4,5,6],disc:[7,8],tree:[9,10,11],non:[9,10,12],loop:9,fin:[13,14]},panel:P});
+  const cnt={T:0,B:0,F:0,C:0};G.edges.forEach((e,i)=>{if(cnt[R.es[i].st]!==undefined)cnt[R.es[i].st]++;});
+  R.snap({title:'DFS complete',msg:`Edge types: ${cnt.T} tree, ${cnt.B} back, ${cnt.F} forward, ${cnt.C} cross. ${cnt.B?'Because DFS found back edges, this directed graph has a cycle.':'No back edges, so the graph is acyclic.'} The tree edges form a depth-first forest of ${G.nodes.filter(x=>!st.pi[x.id]).length} trees.`,why:'Parenthesis theorem: look at the bars. For any two vertices the intervals [d, f] are either disjoint or one sits completely inside the other. Inside means descendant.',panel:P(st)});
+  return R.steps;
+}
+
+/* ---------- 4. Topological sort ---------- */
+function runTopo(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G);const list=[];let fresh=null;
+  const P=(st,cur)=>H.grid(
+    H.box('Linked list <span class="dim">head → tail</span>',H.chips(list.map(x=>({t:lb(x),s:'f='+st.f[x],id:x,cls:x===fresh?'new':''})),'nothing has finished yet'),'Each course is inserted at the head the moment it finishes.'),
+    H.box('Call stack <span class="dim">bottom → top</span>',H.chips(st.stack.map(x=>({t:lb(x),id:x})),'empty')),
+    H.box('Timestamps',H.table(['course','d','f'],G.nodes.map(x=>({id:x.id,cls:x.id===cur?'cur':'',cells:[x.label,st.d[x.id]||'',st.f[x.id]||'']})))));
+  R.snap({title:'A prerequisite chart is a DAG',msg:`An arrow u → v means “take u before v”. A topological sort is a course schedule that respects every arrow. DFS will visit the courses in the order listed in the table (starting with ${V(G.nodes[0].id)}, which is not a starting course, to show that the start doesn't matter).`,why:'A topological order exists only for directed acyclic graphs. A cycle of prerequisites could never be scheduled.',panel:P(emptySt(G))});
+  let askN=0;
+  const st=dfsRun(R,G,{order:G.nodes.map(x=>x.id),classify:false,detail:false,lines:{root:1,disc:4,tree:[5,6],non:5,loop:5,fin:[7,2]},panel:P,
+    discMsg:(u,st)=>{fresh=null;return `${V(u)} is discovered at time ${st.d[u]} and turns GRAY. ${G.adj[u].length?`It leads to ${G.adj[u].map(a=>V(a.v)).join(', ')}.`:'No course requires it, so it will finish right away.'}`;},
+    beforeFin:(u,st)=>{if(st.stack.length>1&&askN<5){R.ask({q:'Which course finishes next?',opts:uniq(st.stack.slice(-4).map(lb)).sort(),ans:lb(u),why:`The vertex on top of the call stack finishes first: ${lb(u)} has no unexplored WHITE successors left.`});askN++;}},
+    onFinish:u=>{list.unshift(u);fresh=u;},
+    finMsg:(u,st)=>`${V(u)} finishes at time ${st.f[u]} and goes to the <b>front</b> of the list. ${G.adj[u].length?`Every course that needs ${lb(u)} (${G.adj[u].map(a=>lb(a.v)).join(', ')}) finished earlier, so it's already behind ${lb(u)} in the list.`:'Nothing depends on it.'}`});
+  fresh=null;
+  R.snap({line:2,title:'Why finish order works',msg:`For any arrow (u, v), DFS finishes v before u. When the edge is explored, v is either WHITE (it becomes a descendant and finishes first) or BLACK (already finished). It can't be GRAY: that would be a back edge, which means a cycle.`,why:'So f[v] < f[u] for every edge, and listing vertices by decreasing finish time puts every u before its v.',panel:P(st)});
+  R.pos=lineLayout(list,2.25);R.arc=true;G.edges.forEach((e,i)=>R.es[i].st='tree');
+  R.snap({line:3,title:'The schedule',msg:`Reading the list left to right: ${list.map(lb).join(' → ')}. Every prerequisite arrow now points to the right.`,why:`Other valid schedules exist. ${lb(list[0])} has no prerequisites and isn't one, so it could go anywhere. DFS produces one valid order in Θ(V + E) time.`,panel:P(st)});
+  return R.steps;
+}
+
+/* ---------- 5. SCC ---------- */
+function runSCC(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),ids=G.nodes.map(x=>x.id);const fin=[];
+  const P1=(st,c)=>H.grid(
+    H.box('Finish order <span class="dim">latest first</span>',H.chips(fin.slice().reverse().map(x=>({t:lb(x),s:'f='+st.f[x],id:x})),'none yet'),'Phase 2 will start from the left end of this list.'),
+    H.box('Timestamps on G',H.table(['v','color','d','f'],G.nodes.map(x=>({id:x.id,cls:x.id===c?'cur':'',cells:[x.label,H.tag(st.col[x.id]),st.d[x.id]||'',st.f[x.id]||'']})))));
+  R.snap({title:'Find the strongly connected components',msg:`An SCC is a maximal group of vertices that can all reach one another. Look for the cycles in this graph: they glue vertices together. Two depth-first searches will find every group.`,why:'G and its transpose Gᵀ (all edges reversed) have exactly the same SCCs: if u and v reach each other in G, they still do when every edge is flipped.',phase:'Phase 1 · DFS on G',panel:P1(emptySt(G))});
+  const st1=dfsRun(R,G,{order:ids,classify:false,detail:false,phase:'Phase 1 · DFS on G',lines:{root:1,disc:1,tree:1,non:1,loop:1,fin:1},panel:P1,onFinish:u=>fin.push(u)});
+  const order2=fin.slice().reverse(),f1=st1.f;
+  R.snap({line:1,phase:'Phase 1 · DFS on G',title:'Phase 1 done: sort by finish time',msg:`Decreasing f: ${order2.map(x=>`${lb(x)} (${f1[x]})`).join(', ')}.`,why:`${lb(order2[0])} finished last, so its component has no incoming edges from other components in G. In the component graph it is a “source”.`,panel:P1(st1)});
+  R.flip=true;G.edges.forEach((e,i)=>R.es[i].st='idle');ids.forEach(x=>{R.ns[x].fill='white';R.ns[x].sub='f='+f1[x];});
+  let k=-1;const comps=[];
+  const P2=(st,c)=>H.grid(
+    H.box('Visit order <span class="dim">decreasing f</span>',H.chips(order2.map(x=>({t:lb(x),s:'f='+f1[x],id:x,cls:st.col[x]!=='white'?'done':(x===c?'curchip':'')})))),
+    H.box('Components found',comps.length?`<ol class="comps">${comps.map((cc,j)=>`<li><span class="sw" style="background:${fillCss('set'+j)}"></span>C${j+1} = {${cc.map(lb).join(', ')}}</li>`).join('')}</ol>`:'<div class="empty">none yet</div>','Each tree of the second DFS is exactly one SCC.'));
+  R.snap({line:2,phase:'Phase 2 · DFS on Gᵀ',title:'Compute Gᵀ: reverse every edge',msg:'Every arrow now points the other way. Edges inside an SCC still form cycles, so each SCC stays strongly connected. Edges <i>between</i> SCCs now point backward, from later components to earlier ones.',why:'With adjacency lists, Gᵀ takes Θ(V + E) to build.',panel:P2(emptySt(G),null)});
+  R.ask({q:'Where does the DFS on Gᵀ start?',opts:uniq([order2[0],order2[order2.length-1],ids[0],order2[2]].map(lb)).sort(),ans:lb(order2[0]),why:`The main loop takes vertices in decreasing f from phase 1. ${lb(order2[0])} has the largest finish time (${f1[order2[0]]}).`});
+  dfsRun(R,G,{adj:transposeAdj(G),order:order2,classify:false,detail:false,phase:'Phase 2 · DFS on Gᵀ',lines:{root:[3,4],disc:[3,4],tree:3,non:3,loop:3,fin:3},panel:P2,
+    paint:(u,ph)=>{R.ns[u].fill=ph==='d'?'set'+k:'set'+k;R.ns[u].sub='f='+f1[u];if(ph==='d')comps[k].push(u);},
+    onRoot:()=>{k++;comps.push([]);},
+    rootMsg:u=>`Take the WHITE vertex with the largest phase-1 finish time: ${V(u)} (f = ${f1[u]}). Start DFS-VISIT(${lb(u)}) in Gᵀ; everything it reaches gets color C${k+1}.`,
+    rootWhy:()=>k===0?'In Gᵀ every edge leaving this source component has been reversed to point in. So DFS from here cannot escape its own SCC.':'All components found so far are BLACK. Any edge from here into another component leads to one of them, so this search also stays inside one SCC.',
+    discMsg:(u)=>`${V(u)} is reachable in Gᵀ, so it joins C${k+1}.`,
+    finMsg:(u)=>`${V(u)} finishes.`,
+    afterTree:(u,st)=>R.snap({line:[5,6],phase:'Phase 2 · DFS on Gᵀ',title:`SCC C${k+1} = {${comps[k].map(lb).join(', ')}}`,msg:`DFS-VISIT(${lb(u)}) has returned. The tree it built is one strongly connected component: ${comps[k].map(V).join(', ')}.`,panel:P2(st,null)})});
+  R.flip=false;const compOf={};comps.forEach((cc,j)=>cc.forEach(x=>compOf[x]=j));
+  const cen=comps.map(cc=>{const c=[0,0,0];cc.forEach(x=>{const p=G.nodes[G.idx[x]].p;c[0]+=p[0];c[1]+=p[1];c[2]+=p[2];});return c.map(v=>v/cc.length);});
+  R.pos={};ids.forEach(x=>{const p=G.nodes[G.idx[x]].p,c=cen[compOf[x]];R.pos[x]=[c[0]*1.25+(p[0]-c[0])*.45,c[1]*1.25+(p[1]-c[1])*.45,c[2]*1.25+(p[2]-c[2])*.45];});
+  const cedges=new Set();G.edges.forEach((e,i)=>{if(compOf[e.u]!==compOf[e.v]){R.es[i].st='tree';cedges.add(`C${compOf[e.u]+1} → C${compOf[e.v]+1}`);}else R.es[i].st='dim';});
+  R.snap({title:'The component graph is a DAG',msg:`Back to the original edge directions. Shrink each SCC to a single point and the bright edges between them form the component graph: ${[...cedges].join(', ')}. It has no cycles.`,why:'If two components were on a cycle, every vertex in both could reach every other, so they would be one SCC. Lemma: if u ⇝ u′ between two SCCs, there is no path back.',panel:P2({col:Object.fromEntries(ids.map(x=>[x,'black']))},null)});
+  return R.steps;
+}
+
+/* ---------- 6. Kruskal ---------- */
+function treePath(G,A,s,t){const adj={};G.nodes.forEach(n=>adj[n.id]=[]);A.forEach(i=>{const e=G.edges[i];adj[e.u].push([e.v,i]);adj[e.v].push([e.u,i]);});const prev={[s]:null},q=[s];while(q.length){const x=q.shift();if(x===t)break;adj[x].forEach(([y,i])=>{if(!(y in prev)){prev[y]=[x,i];q.push(y);}});}const verts=[t],edges=[];let x=t;while(prev[x]){edges.push(prev[x][1]);x=prev[x][0];verts.unshift(x);}return {verts,edges};}
+function runKruskal(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),ids=G.nodes.map(x=>x.id),n=ids.length;
+  const rep={};ids.forEach(x=>rep[x]=x);
+  const paint=()=>ids.forEach(x=>{R.ns[x].fill='set'+G.idx[rep[x]];});
+  const order=G.edges.map((e,i)=>i).sort((a,b)=>G.edges[a].w-G.edges[b].w||a-b);
+  const status={},A=[];let total=0;
+  const sets=()=>{const g={};ids.forEach(x=>(g[rep[x]]=g[rep[x]]||[]).push(x));return g;};
+  const P=cur=>H.grid(
+    H.box('Edges in sorted order',H.table(['edge','w','result'],order.map(i=>({cls:i===cur?'cur':status[i]==='ok'?'ok':status[i]==='no'?'no':'',cells:[exT(G,i),fmt(G.edges[i].w),status[i]==='ok'?'✓ added to A':status[i]==='no'?'✗ cycle, skipped':i===cur?'checking…':'']})))),
+    H.box('Disjoint sets',`<ul class="sets">${Object.entries(sets()).map(([r,xs])=>`<li data-node="${r}"><span class="sw" style="background:${fillCss('set'+G.idx[r])}"></span><span>{${xs.map(lb).join(', ')}}</span><small>rep ${lb(r)}</small></li>`).join('')}</ul>`,'FIND-SET(x) returns the representative of x\'s set. Same representative means same tree.'),
+    H.box('A <span class="dim">edges chosen</span>',H.chips(A.map(i=>({t:exT(G,i),s:'w='+fmt(G.edges[i].w)})),'empty'),`${A.length} of |V| − 1 = ${n-1} edges · total weight ${total}`));
+  paint();
+  R.snap({line:[1,2,3],title:'Every vertex is its own tree',msg:`A starts empty, and MAKE-SET puts each of the ${n} vertices in its own set (one color per set). Kruskal merges these one-vertex trees until a single tree spans the graph.`,why:'Story: lay fiber between 8 campus buildings. Weights are installation costs. Connect every building as cheaply as possible.',panel:P()});
+  R.snap({line:4,title:'Sort the edges by weight',msg:`Sorted weights: ${order.map(i=>fmt(G.edges[i].w)).join(', ')}. Kruskal looks at each edge once, cheapest first, and never reconsiders.`,why:'Sorting dominates the running time: O(E lg E) = O(E lg V), since E < V².',panel:P()});
+  let asks=0;
+  for(const i of order){
+    const e=G.edges[i],ru=rep[e.u],rv=rep[e.v],ok=ru!==rv;
+    if(asks<7){R.ask({q:`The next edge is ${exT(G,i)} with weight ${fmt(e.w)}. Will Kruskal add it?`,opts:['Yes, add it','No, it would form a cycle'],ans:ok?'Yes, add it':'No, it would form a cycle',why:ok?`${lb(e.u)} and ${lb(e.v)} have different colors, so they are in different trees.`:`${lb(e.u)} and ${lb(e.v)} have the same color: they are already connected in A.`});asks++;}
+    R.snap({line:[5,6],title:`Next edge: ${exT(G,i)}, weight ${fmt(e.w)}`,msg:`FIND-SET(${lb(e.u)}) = ${lb(ru)} and FIND-SET(${lb(e.v)}) = ${lb(rv)}.`,focus:{e:[i],n:[e.u,e.v]},panel:P(i)});
+    if(ok){
+      A.push(i);status[i]='ok';total+=e.w;R.es[i].st='tree';const nr=G.idx[ru]<G.idx[rv]?ru:rv;
+      ids.forEach(x=>{if(rep[x]===ru||rep[x]===rv)rep[x]=nr;});paint();
+      R.snap({line:[7,8],title:`Add ${exT(G,i)} and merge the sets`,msg:`Different sets, so ${ex(G,i)} joins two separate trees and can't close a cycle. Add it to A and UNION the sets. |A| = ${A.length}, total weight ${total}.${A.length===n-1?` <b>That's |V| − 1 = ${n-1} edges: A is now a spanning tree.</b> The loop keeps scanning, but every remaining edge will be skipped.`:''}`,why:`Cut property: cut the graph between ${lb(e.u)}'s old tree and everything else. No edge of A crosses that cut, and ${exT(G,i)} is the lightest edge that does (every lighter edge was already handled). So it is safe to add.`,focus:{e:[i],est:'improve',n:[e.u,e.v]},panel:P(i)});
+    }else{
+      status[i]='no';R.es[i].st='reject';const p=treePath(G,A,e.u,e.v);
+      R.snap({line:6,title:`Skip ${exT(G,i)}`,msg:`Same set. ${V(e.u)} and ${V(e.v)} are already joined in A by ${p.verts.map(lb).join(' – ')} (pink). Adding ${ex(G,i)} would close a cycle.`,why:`Every edge on that path weighs at most ${fmt(e.w)}, because they were added earlier. So ${exT(G,i)} is the heaviest edge on the cycle, and the MST doesn't need it.`,focus:{e:[i],est:'reject',pe:p.edges,n:[e.u,e.v]},panel:P(i)});
+    }
+  }
+  G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+  R.snap({line:9,title:`Minimum spanning tree: weight ${total}`,msg:`A holds ${A.length} edges: ${A.map(i=>exT(G,i)).join(', ')}. Total weight ${total}. While A was growing it was a <i>forest</i>: several trees that slowly merged into one.`,why:'Kruskal and Prim are both greedy, and both are justified by the same cut property. Open the Prim module to see a different growth pattern reach the same total.',panel:P()});
+  return R.steps;
+}
+
+/* ---------- 7. Prim ---------- */
+function runPrim(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),ids=G.nodes.map(x=>x.id),r=G.src||ids[0];
+  const key={},pi={},piE={},inQ=new Set(ids);let total=0;
+  ids.forEach(x=>{key[x]=Infinity;pi[x]=null;piE[x]=null;R.ns[x].sub='key=∞';});
+  key[r]=0;R.ns[r].sub='key=0';
+  const paintE=()=>G.edges.forEach((e,i)=>{const a=!inQ.has(e.u),b=!inQ.has(e.v);let st;
+    if(a&&b)st=(piE[e.u]===i||piE[e.v]===i)?'tree':'dim';else if(a!==b){const out=a?e.v:e.u;st=piE[out]===i?'cand':'cut';}else st='idle';R.es[i].st=st;});
+  const sortedQ=()=>[...inQ].sort((x,y)=>key[x]-key[y]||G.idx[x]-G.idx[y]);
+  const P=cur=>H.grid(
+    H.box('Min-priority queue Q <span class="dim">sorted by key</span>',H.chips(sortedQ().map((x,k)=>({t:lb(x),s:'key='+fmt(key[x]),id:x,cls:k===0?'curchip':''})),'Q is empty'),'key[v] = weight of the cheapest single edge from v to the tree so far.'),
+    H.box('Vertex attributes',H.table(['v','in tree','key','π'],ids.map(x=>({id:x,cls:x===cur?'cur':'',cells:[lb(x),inQ.has(x)?'':'✓',fmt(key[x]),pi[x]?lb(pi[x]):'NIL']})))),
+    H.box('Tree edges A',H.chips(ids.filter(x=>!inQ.has(x)&&pi[x]).map(x=>({t:`${lb(pi[x])}–${lb(x)}`,s:'w='+key[x]})),'none yet'),`total weight ${total}`));
+  paintE();
+  R.snap({line:[1,2,3,4],title:`Grow one tree from the root ${lb(r)}`,msg:`Every key starts at ∞ except the root ${V(r)}, whose key is 0. All vertices go into the min-priority queue Q. Same graph as the Kruskal module, so you can compare.`,why:'Unlike Kruskal, the edges Prim has chosen always form a single connected tree.',panel:P()});
+  let asks=0;
+  while(inQ.size){
+    const arr=sortedQ(),u=arr[0];
+    if(arr.length>1&&asks<6){R.ask({q:'Which vertex will EXTRACT-MIN return next?',opts:uniq(arr.slice(0,4).map(lb)).sort(),ans:lb(u),why:`${lb(u)} has the smallest key in Q (${fmt(key[u])}${pi[u]?`, via (${lb(pi[u])}, ${lb(u)})`:''}).`});asks++;}
+    inQ.delete(u);R.ns[u].fill='tree';if(pi[u])total+=key[u];paintE();
+    R.snap({line:[5,6],title:pi[u]?`Extract ${lb(u)}: add edge (${lb(pi[u])}, ${lb(u)})`:`Extract the root ${lb(u)}`,
+      msg:pi[u]?`EXTRACT-MIN returns ${V(u)} with key ${key[u]}, so edge (${lb(pi[u])}, ${lb(u)}) joins the tree. Total weight ${total}.`:`EXTRACT-MIN returns ${V(u)} (key 0). The tree is just {${lb(u)}} for now. Next, ${lb(u)} offers its edges to its neighbors.`,
+      why:pi[u]?`Cut property: split the vertices into “in the tree” (teal) and “not yet” (white). The orange edges cross that cut. (${lb(pi[u])}, ${lb(u)}) was the lightest crossing edge, so it is safe.`:'From now on, the faint orange edges cross the cut between the tree and the rest. The thick orange edge for each outside vertex is its cheapest known link, which is what key stores.',
+      focus:{n:[u],e:pi[u]?[piE[u]]:[],est:'improve'},panel:P(u)});
+    for(const {v,w,i} of G.adj[u]){
+      if(!inQ.has(v)){R.snap({line:8,title:`${lb(v)} is already in the tree`,msg:`${V(v)} is not in Q anymore, so (${lb(u)}, ${lb(v)}) can't be used. It would make a cycle.`,focus:{n:[u],t:[v],e:[i]},panel:P(u)});continue;}
+      if(w<key[v]){const old=key[v];key[v]=w;pi[v]=u;piE[v]=i;R.ns[v].sub='key='+w;paintE();
+        R.snap({line:[8,9,10],title:`Lower key[${lb(v)}] to ${w}`,msg:`w(${lb(u)}, ${lb(v)}) = ${w} < key[${lb(v)}] = ${fmt(old)}. ${V(v)} can now join the tree more cheaply through ${lb(u)}: set π[${lb(v)}] = ${lb(u)} and DECREASE-KEY to ${w}.`,focus:{n:[u],t:[v],e:[i],est:'improve'},panel:P(u)});
+      }else R.snap({line:8,title:`Keep key[${lb(v)}] = ${key[v]}`,msg:`w(${lb(u)}, ${lb(v)}) = ${w} is not less than key[${lb(v)}] = ${key[v]}. ${V(v)}'s best link is still (${lb(pi[v])}, ${lb(v)}).`,focus:{n:[u],t:[v],e:[i]},panel:P(u)});
+    }
+  }
+  G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+  R.snap({line:5,title:`Q is empty: MST weight ${total}`,msg:`The π pointers give the tree: ${ids.filter(x=>pi[x]).map(x=>`(${lb(pi[x])}, ${lb(x)})`).join(', ')}. Total weight ${total}, the same as Kruskal.`,why:'Running time with a binary heap: V EXTRACT-MINs and up to E DECREASE-KEYs, each O(lg V), so O(E lg V). Careful: key[v] is one edge weight, not a distance from the root.',panel:P()});
+  return R.steps;
+}
+
+/* ---------- Shortest-path shared relax ---------- */
+function relaxStep(R,G,S,i,o){
+  const e=G.edges[i],u=e.u,v=e.v,w=e.w,lb=G.lbl,du=S.d[u],dv=S.d[v],cand=du+w;
+  if(du===Infinity){R.snap({line:o.lineNo,phase:o.phase,title:`Relax ${exT(G,i)}: nothing yet`,msg:`d[${lb(u)}] = ∞, so d[${lb(u)}] + w is ∞ too. No path to ${lb(u)} is known yet, so this edge can't help.`,focus:{n:[u],t:[v],e:[i]},panel:o.panel(i)});return false;}
+  const imp=dv>cand;
+  if(o.ask)R.ask({q:`Relaxing ${exT(G,i)}: will d[${lb(v)}] get smaller?`,opts:['Yes','No'],ans:imp?'Yes':'No',why:`Compare d[${lb(v)}] = ${fmt(dv)} with d[${lb(u)}] + w = ${fmt(du)} + ${fw(w)} = ${fmt(cand)}.`});
+  if(imp){
+    if(S.piEdge[v]!=null&&R.es[S.piEdge[v]].st==='tree')R.es[S.piEdge[v]].st='idle';
+    S.d[v]=cand;S.pi[v]=u;S.piEdge[v]=i;R.es[i].st='tree';R.ns[v].sub='d='+fmt(cand);if(R.ns[v].fill==='white')R.ns[v].fill='est';
+    if(o.onImprove)o.onImprove(v);
+    R.snap({line:o.lineYes,phase:o.phase,title:`Relax ${exT(G,i)}: improved`,msg:`d[${lb(v)}] = ${fmt(dv)} > d[${lb(u)}] + w(${lb(u)}, ${lb(v)}) = ${fmt(du)} + ${fw(w)} = ${fmt(cand)}. Going through ${lb(u)} is shorter, so set d[${lb(v)}] = ${fmt(cand)} and π[${lb(v)}] = ${lb(u)}.`,focus:{n:[u],t:[v],e:[i],est:'improve'},panel:o.panel(i)});
+  }else R.snap({line:o.lineNo,phase:o.phase,title:`Relax ${exT(G,i)}: no change`,msg:`d[${lb(v)}] = ${fmt(dv)} ≤ d[${lb(u)}] + w = ${fmt(du)} + ${fw(w)} = ${fmt(cand)}. The current estimate is at least as good.`,focus:{n:[u],t:[v],e:[i]},panel:o.panel(i)});
+  return imp;
+}
+function spInit(R,G,s){const S={d:{},pi:{},piEdge:{}};G.nodes.forEach(x=>{S.d[x.id]=Infinity;S.pi[x.id]=null;S.piEdge[x.id]=null;R.ns[x.id].sub='d=∞';});S.d[s]=0;R.ns[s]={fill:'est',sub:'d=0'};return S;}
+const spTable=(G,S,cur,extra)=>H.table(['v','d','π',...(extra?[extra.h]:[])],G.nodes.map(x=>({id:x.id,cls:x.id===cur?'cur':(extra&&extra.cls?extra.cls(x.id):''),cells:[x.label,fmt(S.d[x.id]),S.pi[x.id]?G.lbl(S.pi[x.id]):'NIL',...(extra?[extra.v(x.id)]:[])]})));
+
+/* ---------- 8. Bellman-Ford ---------- */
+function runBF(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),s=G.src,n=G.nodes.length,ids=G.nodes.map(x=>x.id),m=G.edges.length;
+  const S=spInit(R,G,s);
+  const rows=[{lab:'init',vals:Object.assign({},S.d),ch:new Set([s])}];let live=null;
+  const P=ci=>H.grid(
+    H.box('Edge order <span class="dim">relaxed in this order every pass</span>',H.chips(G.edges.map((e,i)=>({t:`${lb(e.u)}→${lb(e.v)}`,s:'w='+fmt(e.w),cls:i===ci?'curchip':''})))),
+    H.box('d after each pass <span class="dim">orange = changed</span>',H.table(['',...ids.map(lb)],[...rows,...(live?[live]:[])].map(r=>({cls:r===live?'cur':'',cells:[r.lab,...ids.map(x=>`<span class="${r.ch.has(x)?'chg':''}">${fmt(r===live?S.d[x]:r.vals[x])}</span>`)]})).concat([{cells:['π',...ids.map(x=>S.pi[x]?lb(S.pi[x]):'NIL')]}])),'After pass k, every vertex whose shortest path has at most k edges has its final d.'));
+  R.snap({line:1,title:'Initialize single source',msg:`d[${lb(s)}] = 0 and every other d = ∞. Bellman-Ford will relax all ${m} edges, in the fixed order shown below, |V| − 1 = ${n-1} times.`,why:'A shortest path never repeats a vertex, so it has at most |V| − 1 edges. Each full pass pushes correct distances at least one edge further along every shortest path.',panel:P(-1)});
+  let askLeft=8;
+  for(let pass=1;pass<=n-1;pass++){
+    const ph=`Pass ${pass} of ${n-1}`;
+    live={lab:'pass '+pass,ch:new Set()};
+    R.snap({line:2,phase:ph,title:`Pass ${pass} begins`,msg:pass===1?`Relax every edge once, in order. Notice that the edges out of ${lb(s)} come last in this order, so pass 1 only reaches ${lb(s)}'s direct neighbors.`:`Relax all ${m} edges again. Values found in the last pass can now flow one edge further.`,panel:P(-1)});
+    let changed=false;
+    G.edges.forEach((e,i)=>{
+      const ask=askLeft>0&&S.d[e.u]!==Infinity;if(ask)askLeft--;
+      const imp=relaxStep(R,G,S,i,{lineYes:[3,4,9,10,11],lineNo:[3,4,9],phase:ph,panel:P,ask,onImprove:v=>live.ch.add(v)});
+      if(imp)changed=true;
+    });
+    rows.push({lab:'pass '+pass,vals:Object.assign({},S.d),ch:live.ch});const ch=live.ch;live=null;
+    R.snap({line:2,phase:ph,title:`Pass ${pass} done`,msg:changed?`Improved this pass: ${[...ch].map(V).join(', ')}.`:'Nothing changed in this pass, so nothing can change in later passes either. An optimized version could stop now; the textbook version keeps going.',why:`After pass ${pass}, every vertex whose shortest path uses at most ${pass} edge${pass>1?'s':''} has its correct distance.`,panel:P(-1)});
+  }
+  let bad=-1;G.edges.some((e,i)=>{if(S.d[e.v]>S.d[e.u]+e.w){bad=i;return true;}return false;});
+  if(bad<0){
+    R.ask({q:'The final check scans every edge once more. Will it return TRUE or FALSE?',opts:['TRUE','FALSE'],ans:'TRUE',why:'The last pass changed nothing, so every edge already satisfies d[v] ≤ d[u] + w(u, v).'});
+    R.snap({line:[5,6],phase:'Negative-cycle check',title:'Check every edge once more',msg:'For each edge (u, v), test whether d[v] > d[u] + w(u, v). None of them can still be relaxed.',why:'If no negative cycle is reachable from s, the distances are exact after |V| − 1 passes, and exact distances always satisfy d[v] ≤ d[u] + w(u, v).',panel:P(-1)});
+    ids.forEach(x=>{if(S.d[x]<Infinity)R.ns[x].fill='tree';});
+    G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+    R.snap({line:8,phase:'Result',title:'return TRUE',msg:`No negative-weight cycle is reachable from ${V(s)}, so all distances are final. Shortest paths: ${ids.filter(x=>x!==s).map(x=>`${lb(x)} = ${fmt(S.d[x])} (${pathStr(G,S.pi,s,x,S.d)})`).join('; ')}.`,why:`The graph has the cycle ${G.cycleNote||'shown'}, but its total weight is positive, so going around it never helps. Running time O(VE): ${n-1} passes × ${m} edges.`,panel:P(-1)});
+  }else{
+    const e=G.edges[bad];
+    R.ask({q:'The final check scans every edge once more. Will it return TRUE or FALSE?',opts:['TRUE','FALSE'],ans:'FALSE',why:'The d values kept dropping in every pass. That never happens once distances are exact.'});
+    R.snap({line:[5,6],phase:'Negative-cycle check',title:`Edge ${exT(G,bad)} can still be relaxed`,msg:`d[${lb(e.v)}] = ${fmt(S.d[e.v])} > d[${lb(e.u)}] + w = ${fmt(S.d[e.u])} + ${fw(e.w)} = ${fmt(S.d[e.u]+e.w)}. After |V| − 1 passes this is only possible if a negative-weight cycle is reachable from ${V(s)}.`,focus:{e:[bad],est:'bad',n:[e.u],t:[e.v]},panel:P(bad)});
+    let x=e.v;for(let k=0;k<n;k++)x=S.pi[x];const cyc=[x];let y=S.pi[x],g=0;while(y&&y!==x&&g++<n){cyc.unshift(y);y=S.pi[y];}
+    const cE=cyc.map(z=>S.piEdge[z]);const cw=cE.reduce((a,i)=>a+G.edges[i].w,0);
+    cyc.forEach(z=>R.ns[z].fill='bad');cE.forEach(i=>R.es[i].st='bad');
+    R.snap({line:7,phase:'Result',title:'return FALSE',msg:`Following π backward finds the cycle ${[...cyc,cyc[0]].map(lb).join(' → ')}, with total weight ${cyc.slice(1).concat(cyc[0]).map(z=>fw(G.edges[S.piEdge[z]].w)).join(' + ')} = ${fmt(cw)}. Each trip around it lowers the cost by ${-cw}, so δ(s, v) = −∞ for every vertex on or after the cycle. No shortest paths exist.`,why:'Look at the table: the same vertices dropped in every single pass. Exact distances would have stopped changing.',panel:P(-1)});
+  }
+  return R.steps;
+}
+
+/* ---------- 9. DAG shortest paths ---------- */
+function runDAG(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),s=G.src,ids=G.nodes.map(x=>x.id),order=topoOrder(G);
+  let cur=null;const done=new Set();
+  ids.forEach(x=>R.ns[x].sub='');
+  const S0={d:{},pi:{}};ids.forEach(x=>{S0.d[x]=Infinity;S0.pi[x]=null;});
+  let S=S0;
+  const P=()=>H.grid(H.box('Topological order <span class="dim">processed left to right</span>',H.chips(order.map(x=>({t:lb(x),id:x,cls:x===cur?'curchip':done.has(x)?'done':''})))),H.box('Estimates',spTable(G,S,cur)));
+  R.snap({title:'A weighted DAG with negative edges',msg:`Think of these as steps in a project, where some steps earn back time (negative weights). Source: ${V(s)}. Because there are no cycles, there are no negative cycles, so every shortest path is well defined.`,why:'Dijkstra could fail on the negative edges, and Bellman-Ford would cost O(VE). The topological order gets it done in Θ(V + E).',panel:P()});
+  R.pos=lineLayout(order,2.5);R.arc=true;
+  R.snap({line:1,title:'Topologically sort the vertices',msg:`DFS finish times give the order ${order.map(lb).join(' → ')}. Lined up this way, every edge points right.`,why:`Notice ${order[0]!==s?`${lb(order[0])} comes before ${lb(s)}. Nothing from ${lb(s)} can reach it.`:'the source comes first.'}`,panel:P()});
+  S=spInit(R,G,s);
+  R.snap({line:2,title:'Initialize single source',msg:`d[${lb(s)}] = 0, everything else ∞.`,panel:P()});
+  let asks=0;
+  for(const u of order){
+    cur=u;
+    R.snap({line:3,title:`Process ${lb(u)}`,msg:S.d[u]===Infinity?`d[${lb(u)}] = ∞: no path from ${lb(s)} reaches ${V(u)}. Relaxing its edges won't change anything (∞ + w = ∞).`:`Every edge into ${V(u)} comes from a vertex earlier in the order, and all of those have been processed. So d[${lb(u)}] = ${fmt(S.d[u])} is already final. Now relax ${lb(u)}'s outgoing edges.`,focus:{n:[u]},panel:P()});
+    G.adj[u].forEach(({i})=>{const ask=asks<5&&S.d[u]<Infinity;if(ask)asks++;relaxStep(R,G,S,i,{lineYes:[4,5,6,7,8],lineNo:[4,5,6],panel:P,ask});});
+    done.add(u);if(S.d[u]<Infinity)R.ns[u].fill='tree';
+  }
+  cur=null;G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+  R.snap({line:3,title:'Done: one pass was enough',msg:`Shortest paths from ${lb(s)}: ${ids.filter(x=>x!==s).map(x=>`${lb(x)} = ${fmt(S.d[x])} (${pathStr(G,S.pi,s,x,S.d)})`).join('; ')}.`,why:'Each edge was relaxed exactly once. Θ(V + E) total. The same idea with weights negated finds longest paths in a DAG, which is how project “critical paths” are computed.',panel:P()});
+  return R.steps;
+}
+
+/* ---------- 10. Dijkstra ---------- */
+function runDij(G){
+  const R=new Rec(G),lb=G.lbl,V=vx(G),s=G.src,ids=G.nodes.map(x=>x.id);
+  const S=spInit(R,G,s);const inS=new Set(),Q=new Set(ids);let cur=null;
+  const sortedQ=()=>[...Q].sort((a,b)=>S.d[a]-S.d[b]||G.idx[a]-G.idx[b]);
+  const P=()=>H.grid(
+    H.box('Min-priority queue Q <span class="dim">sorted by d</span>',H.chips(sortedQ().map((x,k)=>({t:lb(x),s:'d='+fmt(S.d[x]),id:x,cls:k===0?'curchip':''})),'Q is empty')),
+    H.box('S <span class="dim">finished vertices</span>',H.chips([...inS].map(x=>({t:lb(x),s:'d='+fmt(S.d[x]),id:x})),'S is empty'),'Once a vertex is in S, Dijkstra assumes its d is final.'),
+    H.box('Estimates',spTable(G,S,cur)));
+  R.snap({line:[1,2,3],title:'Initialize',msg:`d[${lb(s)}] = 0, all others ∞. S is empty and every vertex is in the min-priority queue Q, keyed by d.`,why:G.note||'Dijkstra is greedy: it repeatedly finalizes the closest unfinished vertex. It is like BFS with a priority queue instead of a FIFO queue.',panel:P()});
+  let asks=0;
+  while(Q.size){
+    const arr=sortedQ(),u=arr[0];cur=u;
+    if(arr.length>1&&asks<6){R.ask({q:'Which vertex will EXTRACT-MIN return next?',opts:uniq(arr.slice(0,4).map(lb)).sort(),ans:lb(u),why:`${lb(u)} has the smallest d in Q (${fmt(S.d[u])}).`});asks++;}
+    Q.delete(u);inS.add(u);R.ns[u].fill='tree';
+    R.snap({line:[4,5,6],title:`Extract ${lb(u)} (d = ${fmt(S.d[u])})`,msg:`${V(u)} has the smallest estimate in Q, so it joins S and its distance ${fmt(S.d[u])} is treated as final.`,why:`Any other path to ${lb(u)} must leave S through some vertex y still in Q, with d[y] ≥ d[${lb(u)}]. With nonnegative weights, the rest of that path can't bring the total lower.`,focus:{n:[u]},panel:P()});
+    for(const {i,v} of G.adj[u]){
+      const imp=relaxStep(R,G,S,i,{lineYes:[7,8,9,10,11],lineNo:[7,8,9],panel:P});
+      if(imp&&inS.has(v)){R.ns[v].fill='bad';
+        R.snap({line:[9,10,11],title:`${lb(v)} was already final!`,msg:`${V(v)} is in S, yet its distance just dropped from the value Dijkstra already “finalized”. The negative edge ${ex(G,i)} broke the greedy guarantee. Worse, any vertex computed from ${lb(v)}'s old value is now stale too.`,focus:{n:[u],t:[v],e:[i],est:'bad'},panel:P()});}
+    }
+  }
+  cur=null;const tru=bfDist(G,s);const wrong=ids.filter(x=>tru[x]!==S.d[x]);
+  G.edges.forEach((e,i)=>{if(R.es[i].st!=='tree')R.es[i].st='dim';});
+  if(wrong.length){wrong.forEach(x=>R.ns[x].fill='bad');
+    R.snap({line:4,title:'Q is empty, but the answer is wrong',msg:`Dijkstra reports ${wrong.map(x=>`d[${lb(x)}] = ${fmt(S.d[x])}`).join(', ')}, but the true shortest distance${wrong.length>1?'s are':' is'} ${wrong.map(x=>`δ(${lb(s)}, ${lb(x)}) = ${fmt(tru[x])}`).join(', ')}. The vertex was finalized before the negative edge was seen.`,why:'This is why Dijkstra requires w(u, v) ≥ 0. With negative edges (but no negative cycles), use Bellman-Ford, or the DAG algorithm if the graph is acyclic.',panel:H.grid(H.box('Dijkstra vs. true distances',spTable(G,S,null,{h:'true δ',v:x=>`<span class="${tru[x]===S.d[x]?'ok-t':'bad-t'}">${fmt(tru[x])}</span>`,cls:x=>wrong.includes(x)?'bad':''})))});
+  }else R.snap({line:4,title:'Q is empty: all distances final',msg:`Shortest paths from ${lb(s)}: ${ids.filter(x=>x!==s).map(x=>`${lb(x)} = ${fmt(S.d[x])} (${pathStr(G,S.pi,s,x,S.d)})`).join('; ')}.`,why:'With a binary heap: V EXTRACT-MINs and up to E DECREASE-KEYs at O(lg V) each, so O(E lg V).',panel:P()});
+  return R.steps;
+}
+
+/* ======================= Example graphs ======================= */
+const MSTG={weighted:true,src:'A',nodes:[['A',-4.5,1.8,.5],['B',-1.2,3,-.8],['C',2.4,2.4,.6],['D',-4,-1.6,-1],['E',-.4,0,1.2],['F',3.6,-.4,-.8],['G',-1.6,-3,.4],['H',2,-2.6,1.4]],
+  edges:[['A','B',5],['B','C',4],['A','D',3],['A','E',9],['B','E',6],['C','E',7],['C','F',2],['D','E',8],['D','G',4],['E','F',5],['E','G',10],['E','H',1],['F','H',3],['G','H',11]]};
+
+const MODS=[
+ {id:'rep',group:'Foundations',name:'Graph Representation',short:'lists vs. matrix',idea:'Two standard ways to store G = (V, E): an array of adjacency lists, or a |V| × |V| adjacency matrix. Which one wins depends on how dense the graph is and which question you ask most often.',
+  facts:[['List space','Θ(V + E)'],['Matrix space','Θ(V²)'],['Edge test','O(deg u) vs Θ(1)']],
+  legend:[['r','cur','vertex being listed'],['r','tgt','its neighbors'],['e','consider','its edges']],run:runRep,code:null,
+  examples:[
+   {name:'Undirected',note:'Six vertices, eight undirected edges.',g:{directed:false,query:['a','d'],nodes:[['a',-3.6,1.4,0],['b',-.2,2.5,1.2],['c',-2,-1.8,-1],['d',2.8,1,-1.2],['e',.8,-2,.9],['f',4.2,-1.6,.8]],edges:[['a','b'],['a','c'],['b','c'],['b','d'],['c','e'],['d','e'],['d','f'],['e','f']]}},
+   {name:'Directed',note:'Nine directed edges, including a pair of opposite edges (b ⇄ d) and a self-loop on f.',g:{directed:true,query:['d','b'],inQ:'b',nodes:[['a',-3.6,1.4,0],['b',-.2,2.5,1.2],['c',-2,-1.8,-1],['d',2.8,1,-1.2],['e',.8,-2,.9],['f',4.2,-1.6,.8]],edges:[['a','b'],['a','c'],['b','d'],['c','b'],['d','b'],['d','e'],['e','c'],['e','f'],['f','f']]}}],
+  takeaways:['Undirected: list lengths sum to 2|E| and the matrix is symmetric (A = Aᵀ). Directed: lengths sum to |E|.','Sparse graph (|E| ≪ |V|²) → adjacency lists. Dense graph, or many “is (u, v) an edge?” queries → matrix.','Weighted graphs store w(u, v) next to v in Adj[u], or in matrix cell (u, v).','BFS and DFS run in Θ(V + E) with lists. With a matrix they cost Θ(V²), because every row must be read in full.'],
+  traps:['Listing the neighbors of u costs Θ(V) in a matrix even if u has only one neighbor.','Finding edges <i>into</i> v with lists means scanning every list. Build Gᵀ if you need that often.','A self-loop is a 1 on the diagonal, and u appears in its own list.']},
+ {id:'bfs',group:'Foundations',name:'Breadth-First Search',short:'O(V+E)',idea:'Explore outward from a source in waves. Every vertex at distance k is discovered before any vertex at distance k + 1, because a first-in, first-out queue keeps the waves in order.',
+  facts:[['Time','O(V + E)'],['Structure','FIFO queue'],['Gives','d[v] = fewest edges, π[v]']],
+  legend:[['n','white','WHITE · undiscovered'],['n','gray','GRAY · in queue'],['n','black','BLACK · finished'],['e','tree','tree edge'],['e','improve','edge that discovers v'],['e','consider','edge being checked'],['r','cur','current vertex u']],run:runBFS,
+  code:['§BFS(G, s)','for each vertex u ∈ G.V − {s}','    u.color = WHITE;  u.d = ∞;  u.π = NIL','s.color = GRAY;  s.d = 0;  s.π = NIL','Q = ∅;  ENQUEUE(Q, s)','while Q ≠ ∅','    u = DEQUEUE(Q)','    for each v in G.Adj[u]','        if v.color == WHITE','            v.color = GRAY','            v.d = u.d + 1;  v.π = u','            ENQUEUE(Q, v)','    u.color = BLACK'],
+  examples:[{name:'Friend network',note:'Who is how many introductions away from s? Vertex h has no connections, so BFS never reaches it.',g:{directed:false,src:'s',nodes:[['s',-5,0,0],['a',-2.8,1.8,1.2],['b',-2.8,-1.4,-1.2],['c',-.4,1,-1.6],['d',-.2,-2,1.4],['e',2,1.6,.6],['f',2.2,-1.8,-1.2],['g',4.6,0,.4],['h',4.2,2.9,-2.4]],edges:[['s','a'],['s','b'],['a','c'],['b','c'],['b','d'],['c','e'],['d','e'],['d','f'],['e','g'],['f','g']]}}],
+  takeaways:['A vertex turns GRAY when it is enqueued, not when it is dequeued. That stops it from entering the queue twice.','The π pointers form a breadth-first tree. Following π back to s gives a path with the fewest edges.','Vertices not reachable from s keep d = ∞.','O(V + E): each vertex is enqueued once and each adjacency list is scanned once.'],
+  traps:['BFS counts edges, not weights. For weighted graphs use Dijkstra or Bellman-Ford.','The tree depends on the order of the adjacency lists; the distances d do not.','An undirected edge to the parent is seen again from the child side; it is simply skipped.']},
+ {id:'dfs',group:'Foundations',name:'Depth-First Search',short:'Θ(V+E)',idea:'Go as deep as possible, then back up. Discovery and finish timestamps record the recursion, and every edge gets one of four types: tree, back, forward or cross.',
+  facts:[['Time','Θ(V + E)'],['Structure','recursion stack'],['Gives','d, f, π, forest, edge types']],
+  legend:[['n','white','WHITE'],['n','gray','GRAY · on stack'],['n','black','BLACK · finished'],['e','T','T tree'],['e','B','B back'],['e','F','F forward'],['e','C','C cross'],['r','cur','current vertex']],run:runDFS,
+  code:['§DFS(G)','for each vertex u ∈ G.V','    u.color = WHITE;  u.π = NIL','time = 0','for each vertex u ∈ G.V','    if u.color == WHITE','        DFS-VISIT(G, u)','§DFS-VISIT(G, u)','time = time + 1;  u.d = time','u.color = GRAY','for each v in G.Adj[u]','    if v.color == WHITE','        v.π = u;  DFS-VISIT(G, v)','    else classify (u, v)  // GRAY: back, BLACK: fwd/cross','time = time + 1;  u.f = time','u.color = BLACK'],
+  examples:[{name:'All four edge types',note:'Seven vertices with every edge type, including a self-loop on f. Adjacency lists are in alphabetical order.',g:{directed:true,nodes:[['a',-4,1.5,0],['b',-1.6,2.6,1.4],['c',-1.2,-.4,-1.6],['d',-3.6,-2.2,1],['e',1.8,-2,1.2],['f',4,.4,-1],['g',1.7,2.2,-1.5]],edges:[['a','b'],['a','d'],['b','c'],['c','a'],['c','d'],['e','d'],['e','f'],['f','f'],['f','g'],['g','c'],['g','e']]}}],
+  takeaways:['Edge type is decided by v\'s color when (u, v) is explored: WHITE → tree, GRAY → back, BLACK → forward if d[u] < d[v], cross if d[u] > d[v].','A directed graph has a cycle if and only if DFS finds a back edge.','Parenthesis theorem: intervals [d, f] are either nested (descendant) or disjoint.','White-path theorem: v becomes a descendant of u exactly when, at time d[u], there is a path u ⇝ v of WHITE vertices.'],
+  traps:['In an undirected graph, DFS only produces tree and back edges.','Results depend on the order of the main loop and of each adjacency list.','A self-loop counts as a back edge.']},
+ {id:'topo',group:'DFS applications',name:'Topological Sort',short:'Θ(V+E)',idea:'In a directed acyclic graph, list the vertices by decreasing DFS finish time and every edge points forward. Here the DAG is a chain of course prerequisites.',
+  facts:[['Time','Θ(V + E)'],['Needs','a DAG'],['Tool','DFS finish times']],
+  legend:[['n','white','not started'],['n','gray','on stack'],['n','black','finished · in list'],['e','tree','DFS tree edge'],['r','cur','current course']],run:runTopo,
+  code:['§TOPOLOGICAL-SORT(G)','call DFS(G) to compute finish times v.f','as each vertex finishes, insert it at the front of a linked list','return the linked list of vertices','§DFS-VISIT(G, u)  // abridged','u.d = ++time;  u.color = GRAY','for each v in G.Adj[u]','    if v.color == WHITE:  DFS-VISIT(G, v)','u.f = ++time;  u.color = BLACK  // ← line 2 happens here'],
+  examples:[{name:'CS course prerequisites',note:'An arrow u → v means “u is a prerequisite of v”. Tech Writing has no prerequisites and isn\'t one.',g:{directed:true,nodes:[['ds',0,.6,0,'DataStr'],['p1',-5,1.6,0,'Prog1'],['p2',-2.6,2.2,1,'Prog2'],['dm',-3.4,-1.6,-1,'Discrete'],['al',2.8,1.9,-.8,'Algo'],['th',5.2,.6,0,'Theory'],['os',2.8,-1.6,1,'OS'],['ar',-.4,-2.6,1.6,'Arch'],['tw',-5.4,-2.8,1.8,'Writing']],edges:[['p1','p2'],['p2','ds'],['dm','ds'],['dm','th'],['ds','al'],['ds','os'],['ar','os'],['al','th']]}}],
+  takeaways:['For every edge (u, v) in a DAG, f[v] < f[u]. Sorting by decreasing f puts every u before its v.','Inserting at the front of a list as vertices finish is that sort, for free.','A DAG can have many valid topological orders.','If DFS finds a back edge, the graph has a cycle and no topological order exists.'],
+  traps:['Sorting by <i>discovery</i> time does not work.','The DFS can start anywhere, even in the middle of the DAG.','Isolated vertices can appear anywhere in the order.']},
+ {id:'scc',group:'DFS applications',name:'Strongly Connected Components',short:'2 × DFS',idea:'Two depth-first searches find every SCC: one on G for finish times, then one on the transpose Gᵀ, taking vertices in decreasing finish time. Each tree of the second search is exactly one SCC.',
+  facts:[['Time','Θ(V + E)'],['Passes','DFS on G, DFS on Gᵀ'],['Key fact','G and Gᵀ have the same SCCs']],
+  legend:[['n','gray','GRAY (phase 1)'],['n','black','BLACK (phase 1)'],['n','set0','component colors (phase 2)'],['e','tree','DFS tree / component-graph edge'],['r','cur','current vertex']],run:runSCC,
+  code:['§STRONGLY-CONNECTED-COMPONENTS(G)','call DFS(G) to compute finish times u.f','compute Gᵀ  // reverse every edge','call DFS(Gᵀ), taking vertices in the main loop','    in order of decreasing u.f (from line 1)','output the vertices of each tree in the second','    depth-first forest as a separate SCC'],
+  examples:[{name:'Four components',note:'Three cycles plus a lone sink vertex i.',g:{directed:true,nodes:[['a',-4.6,1.6,.6],['b',-2.6,2.5,-.8],['c',-3.3,-.3,-1.3],['d',.2,2.8,.9],['e',1.6,1.2,-.9],['f',-.9,-1.8,-.4],['g',1.5,-2.8,1],['h',.5,-.6,1.6],['i',4.4,-.7,0]],edges:[['a','b'],['b','c'],['c','a'],['b','d'],['d','e'],['e','d'],['c','f'],['f','g'],['g','h'],['h','f'],['e','g'],['e','i'],['h','i']]}}],
+  takeaways:['The component graph Gˢᶜᶜ (one vertex per SCC) is always a DAG.','The vertex with the largest finish time lies in a source component of Gˢᶜᶜ, which becomes a sink in Gᵀ. That is why the second DFS cannot leak into other components.','Lemma: if there is a path u ⇝ u′ from one SCC to another, there is no path back.'],
+  traps:['The second DFS must run on Gᵀ, in decreasing order of the <i>first</i> DFS\'s finish times.','Running the second DFS on G instead would merge components.','A single vertex with no cycle through it is its own SCC.']},
+ {id:'kruskal',group:'Minimum spanning trees',name:'Kruskal\'s Algorithm',short:'O(E lg V)',idea:'Sort all edges by weight and add each one unless it would close a cycle. A disjoint-set structure answers “are u and v already connected?” in nearly constant time.',
+  facts:[['Time','O(E lg V)'],['Structure','disjoint sets'],['Grows','a forest that merges']],
+  legend:[['n','set0','color = disjoint set'],['e','tree','in A'],['e','consider','edge being checked'],['e','improve','just added'],['e','reject','skipped (cycle)'],['e','cycle','path that would close the cycle']],run:runKruskal,
+  code:['§MST-KRUSKAL(G, w)','A = ∅','for each vertex v ∈ G.V','    MAKE-SET(v)','sort the edges of G.E into nondecreasing order by w','for each edge (u, v), taken in sorted order','    if FIND-SET(u) ≠ FIND-SET(v)','        A = A ∪ {(u, v)}','        UNION(u, v)','return A'],
+  examples:[{name:'Campus fiber network',note:'Eight buildings; edge weights are cabling costs.',g:MSTG}],
+  takeaways:['Each accepted edge is a light edge crossing a cut that respects A, so the cut property makes it safe.','An MST has exactly |V| − 1 edges and no cycles.','A skipped edge is the heaviest edge on the cycle it would close.','With ties in weight there can be several MSTs, all with the same total weight.'],
+  traps:['A is a <i>forest</i> while Kruskal runs, not one tree.','Edges are skipped because they close a cycle, not because they are heavy.','Running time depends on the disjoint-set implementation; with union by rank and path compression, sorting dominates.']},
+ {id:'prim',group:'Minimum spanning trees',name:'Prim\'s Algorithm',short:'O(E lg V)',idea:'Grow a single tree from a root. At each step, add the lightest edge leaving the tree. key[v] stores the cheapest known link from each outside vertex to the tree.',
+  facts:[['Time','O(E lg V) with a heap'],['Structure','min-priority queue on key'],['Grows','one tree']],
+  legend:[['n','tree','in the tree'],['n','white','in Q'],['e','tree','tree edge'],['e','cand','cheapest link (key)'],['e','cut','other edges crossing the cut'],['e','improve','key lowered / added'],['r','cur','extracted vertex']],run:runPrim,
+  code:['§MST-PRIM(G, w, r)','for each vertex u ∈ G.V','    u.key = ∞;  u.π = NIL','r.key = 0','Q = G.V  // min-priority queue on key','while Q ≠ ∅','    u = EXTRACT-MIN(Q)  // add u to the tree','    for each v in G.Adj[u]','        if v ∈ Q and w(u, v) < v.key','            v.π = u','            v.key = w(u, v)  // DECREASE-KEY'],
+  examples:[{name:'Campus fiber network',note:'Same graph as the Kruskal module, rooted at A.',g:MSTG}],
+  takeaways:['The tree vertices and Q form a cut. The extracted vertex arrives via the lightest edge crossing it, so it is safe.','Prim always has one connected tree; Kruskal has a forest.','Prim and Dijkstra have the same shape. The difference is the key: one edge weight here, a whole path weight in Dijkstra.'],
+  traps:['key[v] is not the distance from the root.','The test “v ∈ Q” matters: without it, tree vertices could get new parents.','The MST weight doesn\'t depend on the root; the order edges are added does.']},
+ {id:'bf',group:'Shortest paths',name:'Bellman-Ford',short:'O(VE)',idea:'Relax every edge |V| − 1 times. That is enough because a shortest path has at most |V| − 1 edges. One more scan of the edges detects a negative-weight cycle.',
+  facts:[['Time','O(VE)'],['Negative edges','allowed'],['Returns','TRUE / FALSE']],
+  legend:[['n','est','d < ∞'],['n','white','d = ∞'],['n','tree','final'],['n','bad','on a negative cycle'],['e','tree','π edge'],['e','improve','relax improved d'],['e','consider','relax, no change'],['e','bad','negative cycle']],run:runBF,
+  code:['§BELLMAN-FORD(G, w, s)','INITIALIZE-SINGLE-SOURCE(G, s)','for i = 1 to |G.V| − 1','    for each edge (u, v) ∈ G.E','        RELAX(u, v, w)','for each edge (u, v) ∈ G.E','    if v.d > u.d + w(u, v)','        return FALSE','return TRUE','§RELAX(u, v, w)','if v.d > u.d + w(u, v)','    v.d = u.d + w(u, v)','    v.π = u'],
+  examples:[
+   {name:'Negative edges',note:'Edges are relaxed in a deliberately bad order (source edges last), so all 5 passes are needed. The cycle b → a → c → d → e → b has positive weight.',g:{directed:true,weighted:true,src:'s',nodes:[['s',-4.8,0,0],['a',-1.8,2.3,1],['b',-1.8,-2.1,-.8],['c',1.3,2,-1],['d',1.6,-1.7,1],['e',4.6,.3,0]],edges:[['d','e',2],['c','d',-3],['c','e',6],['a','c',2],['b','d',7],['b','a',1],['e','b',-1],['s','a',4],['s','b',2]]}},
+   {name:'Negative cycle',note:'The cycle a → b → c → a weighs 2 − 6 + 1 = −3. Watch d keep dropping every pass.',g:{directed:true,weighted:true,src:'s',nodes:[['s',-4.4,0,0],['a',-1.4,1.9,.8],['b',1.6,1.4,-1],['c',.4,-1.9,.6],['d',4,-1.2,.4]],edges:[['s','a',3],['a','b',2],['b','c',-6],['c','a',1],['c','d',2]]}}],
+  takeaways:['After pass k, every vertex whose shortest path has ≤ k edges is correct.','Edge order changes how fast values settle, not the final answer.','If a pass changes nothing, you can stop early.','FALSE means some δ(s, v) = −∞: no shortest path exists.'],
+  traps:['Only negative cycles <i>reachable from s</i> matter.','Bellman-Ford handles negative edges; Dijkstra does not.','O(VE) is much slower than Dijkstra\'s O(E lg V) on graphs without negative edges.']},
+ {id:'dag',group:'Shortest paths',name:'DAG Shortest Paths',short:'Θ(V+E)',idea:'If the graph has no cycles, relax edges in topological order. Each vertex is final before its outgoing edges are used, so one pass is enough, even with negative weights.',
+  facts:[['Time','Θ(V + E)'],['Negative edges','allowed'],['Needs','a DAG']],
+  legend:[['n','est','d < ∞'],['n','white','d = ∞'],['n','tree','processed'],['e','tree','π edge'],['e','improve','relax improved d'],['e','consider','relax, no change'],['r','cur','current vertex']],run:runDAG,
+  code:['§DAG-SHORTEST-PATHS(G, w, s)','topologically sort the vertices of G','INITIALIZE-SINGLE-SOURCE(G, s)','for each vertex u, in topological order','    for each vertex v in G.Adj[u]','        RELAX(u, v, w)','§RELAX(u, v, w)','if v.d > u.d + w(u, v)','    v.d = u.d + w(u, v)','    v.π = u'],
+  examples:[{name:'Project steps',note:'Six steps with some negative weights. q comes before the source s, so it is unreachable.',g:{directed:true,weighted:true,src:'s',nodes:[['q',-3,2.6,1],['s',-4.2,-.6,-1],['a',-1,1.5,-1.5],['b',.3,-1.9,1],['c',2.8,1.3,.4],['d',4.2,-1.4,-.8]],edges:[['q','s',3],['q','a',1],['s','a',2],['s','b',6],['a','b',3],['a','c',4],['b','c',-2],['b','d',1],['c','d',-1]]}}],
+  takeaways:['No cycles means no negative cycles, so δ is always well defined.','Each edge is relaxed exactly once: Θ(V + E).','Vertices before s in the topological order stay at ∞.','Negate the weights to find longest (critical) paths in a DAG.'],
+  traps:['Relaxing in any order other than topological order can need more than one pass.','This only works on DAGs; a single cycle breaks the argument.']},
+ {id:'dij',group:'Shortest paths',name:'Dijkstra\'s Algorithm',short:'O(E lg V)',idea:'Greedy: always finalize the unfinished vertex with the smallest estimate d. With nonnegative weights, no later path can undercut it.',
+  facts:[['Time','O(E lg V) with a heap'],['Weights','must be ≥ 0'],['Structure','min-priority queue on d']],
+  legend:[['n','tree','in S (final)'],['n','est','in Q, d < ∞'],['n','white','d = ∞'],['n','bad','wrong answer'],['e','tree','π edge'],['e','improve','relax improved d'],['e','consider','relax, no change'],['r','cur','extracted vertex']],run:runDij,
+  code:['§DIJKSTRA(G, w, s)','INITIALIZE-SINGLE-SOURCE(G, s)','S = ∅','Q = G.V  // min-priority queue keyed by d','while Q ≠ ∅','    u = EXTRACT-MIN(Q)','    S = S ∪ {u}','    for each vertex v in G.Adj[u]','        RELAX(u, v, w)  // may DECREASE-KEY','§RELAX(u, v, w)','if v.d > u.d + w(u, v)','    v.d = u.d + w(u, v)','    v.π = u'],
+  examples:[
+   {name:'Nonnegative weights',note:'Delivery routes between six stops. Several estimates drop more than once before they are extracted.',g:{directed:true,weighted:true,src:'s',nodes:[['s',-4.6,0,0],['a',-1.2,2.3,1],['b',-1.8,-2.1,-1],['c',1.3,-1.2,1.3],['d',1.8,2.2,-.9],['e',4.7,.2,0]],edges:[['s','a',7],['s','b',2],['b','a',3],['b','c',8],['b','e',10],['a','c',1],['a','d',6],['c','d',2],['c','e',5],['d','e',1]]}},
+   {name:'Negative edge breaks it',note:'One negative edge, b → a. Dijkstra finalizes a too early, and c inherits the mistake.',g:{directed:true,weighted:true,src:'s',note:'Watch what happens when the negative edge b → a is finally relaxed after a has already been finalized.',nodes:[['s',-3.8,0,0],['a',0,1.9,.6],['b',0,-1.9,-.6],['c',3.8,1,0]],edges:[['s','a',2],['s','b',5],['b','a',-4],['a','c',1]]}}],
+  takeaways:['Like BFS, but with a priority queue keyed by d instead of a FIFO queue.','Like Prim, but key is the whole path weight d[u] + w(u, v), not just w(u, v).','Each vertex is extracted once; once in S, its d is final (when weights are ≥ 0).'],
+  traps:['The requirement is w(u, v) ≥ 0. Zero-weight edges are fine.','The lecture\'s “Practice” slide runs Dijkstra on a graph with negative edges. Expect to explain why it can fail.','Using Dijkstra on an unweighted graph works, but BFS does the same job in O(V + E).']}
+];
+if(typeof module!=='undefined')module.exports={MODS,mkGraph};
+</script>
+
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- state ---------- */
+let mod=null,exIdx=0,G=null,steps=[],idx=0,quiz=store.get('gal-quiz',true),timer=null,answered={},score={c:0,t:0},sel=null,curStep=null;
+
+/* ---------- 3D ---------- */
+const host=$('#stage'),labels=$('#labels');
+let renderer=null,scene,camera,grid,nodeGroup,edgeGroup,NO={},ELAB=[],anim=null;
+const NODE_R=.42,V3=THREE.Vector3,Y=new V3(0,1,0);
+const cam={theta:.55,phi:1.13,r:18,t:new V3(),gT:new V3(),gR:18};
+let spin=!reduce,drag=null,lastTouch=0;
+const ROLE={cur:{c:0xFFB020,o:.95,s:1.26},tgt:{c:0xFFFFFF,o:.85,s:1.22},sel:{c:0x5CC8EA,o:.95,s:1.28},none:{c:0x9FB0CC,o:.22,s:1.14}};
+class Sub extends THREE.Curve{constructor(c,a,b){super();this.c=c;this.a=a;this.b=b;}getPoint(t,o){o=o||new V3();return o.copy(this.c.getPoint(this.a+(this.b-this.a)*t));}}
+function walk(cv,ref,t,step,dist){for(let k=0;k<400;k++){if(cv.getPoint(t).distanceTo(ref)>=dist)return t;const nt=t+step;if(nt<0||nt>1)return t;t=nt;}return t;}
+
+function initThree(){
+  try{renderer=new THREE.WebGLRenderer({antialias:true});}catch(e){renderer=null;}
+  if(!renderer||!renderer.getContext()){renderer=null;labels.hidden=true;host.insertAdjacentHTML('afterbegin','<div class="nogl">The 3D view needs WebGL, which isn\'t available here. The step-by-step explanation, pseudocode and data structures below still work.</div>');return;}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  host.prepend(renderer.domElement);
+  scene=new THREE.Scene();scene.background=new THREE.Color(0x0B1322);scene.fog=new THREE.Fog(0x0B1322,26,60);
+  camera=new THREE.PerspectiveCamera(40,1,.1,200);
+  scene.add(new THREE.HemisphereLight(0xDFE8FF,0x1A2233,.8));
+  const d1=new THREE.DirectionalLight(0xffffff,.75);d1.position.set(6,10,8);scene.add(d1);
+  const d2=new THREE.DirectionalLight(0x88AAFF,.3);d2.position.set(-8,-4,-6);scene.add(d2);
+  grid=new THREE.GridHelper(44,44,0x23345A,0x152036);scene.add(grid);
+  nodeGroup=new THREE.Group();edgeGroup=new THREE.Group();scene.add(nodeGroup,edgeGroup);
+  const ro=new ResizeObserver(()=>{const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/Math.max(1,h);camera.updateProjectionMatrix();});ro.observe(host);
+  const el=renderer.domElement;
+  el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,id:e.pointerId};lastTouch=performance.now();});
+  window.addEventListener('pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;drag.x=e.clientX;drag.y=e.clientY;cam.theta-=dx*.007;cam.phi=Math.min(2.85,Math.max(.18,cam.phi-dy*.007));lastTouch=performance.now();});
+  window.addEventListener('pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)<6)pick(e);drag=null;});
+  window.addEventListener('pointercancel',()=>{drag=null;});
+  el.addEventListener('wheel',e=>{e.preventDefault();cam.gR=Math.min(70,Math.max(5,cam.gR*(1+e.deltaY*.0011)));lastTouch=performance.now();},{passive:false});
+  requestAnimationFrame(frame);
+}
+function pick(e){
+  const r=renderer.domElement.getBoundingClientRect();
+  const v=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  const rc=new THREE.Raycaster();rc.setFromCamera(v,camera);
+  const hit=rc.intersectObjects(Object.values(NO).map(o=>o.mesh))[0];
+  setSel(hit?hit.object.userData.id:null);
+}
+function setSel(id){sel=sel===id?null:id;applyRoles();markSel();}
+function markSel(){document.querySelectorAll('#panel [data-node]').forEach(el=>el.classList.toggle('selx',!!sel&&el.dataset.node===sel));}
+
+const sphereGeo=()=>new THREE.SphereGeometry(NODE_R,32,24);
+function buildScene(){
+  labels.innerHTML='';NO={};ELAB=[];anim=null;
+  if(renderer){
+    [nodeGroup,edgeGroup].forEach(g=>g.children.slice().forEach(m=>{g.remove(m);m.geometry.dispose();m.material.dispose();}));
+  }
+  G.nodes.forEach(n=>{
+    const o={id:n.id,cur:new V3(...n.p),from:new V3(...n.p),to:new V3(...n.p),role:'none'};
+    o.el=document.createElement('div');o.el.className='nlab';o.el.innerHTML=`<span class="nm">${esc(n.label)}</span><span class="sb"></span>`;o.sub=o.el.querySelector('.sb');labels.appendChild(o.el);
+    if(renderer){
+      o.mesh=new THREE.Mesh(sphereGeo(),new THREE.MeshStandardMaterial({color:0xEEF2F7,roughness:.42,metalness:.05}));o.mesh.userData.id=n.id;
+      o.outline=new THREE.Mesh(sphereGeo(),new THREE.MeshBasicMaterial({color:0x9FB0CC,side:THREE.BackSide,transparent:true,opacity:.22}));
+      o.mesh.position.copy(o.cur);o.outline.position.copy(o.cur);nodeGroup.add(o.mesh,o.outline);
+    }
+    NO[n.id]=o;
+  });
+  G.edges.forEach(()=>{const el=document.createElement('div');el.className='elab';labels.appendChild(el);ELAB.push({el,pos:new V3(),text:''});});
+  if(renderer){const minY=Math.min(...G.nodes.map(n=>n.p[1]));grid.position.y=minY-1.8;}
+}
+function fit(posOf,instant){
+  const pts=G.nodes.map(n=>posOf(n));const c=new V3();pts.forEach(p=>c.add(p));c.multiplyScalar(1/pts.length);
+  let R=0;pts.forEach(p=>R=Math.max(R,p.distanceTo(c)));
+  cam.gT.copy(c);cam.gR=Math.min(46,Math.max(11,R*2.55+4.5));
+  if(instant){cam.t.copy(cam.gT);cam.r=cam.gR;}
+}
+function edgeState(i){const s=curStep,f=s.focus||{};if(f.e&&f.e.includes(i))return f.est||'consider';if(f.pe&&f.pe.includes(i))return f.pest||'cycle';return s.edges[i].st;}
+function rebuildEdges(){
+  if(!curStep)return;
+  if(renderer)edgeGroup.children.slice().forEach(m=>{edgeGroup.remove(m);m.geometry.dispose();m.material.dispose();});
+  G.edges.forEach((e,i)=>{
+    const st=edgeState(i),S=EST[st]||EST.idle,a=NO[e.u].cur,b=NO[e.v].cur;let cv;
+    if(e.u===e.v){cv=new THREE.CubicBezierCurve3(a.clone().add(new V3(-.26,.3,0)),a.clone().add(new V3(-1.15,1.8,0)),a.clone().add(new V3(1.15,1.8,0)),a.clone().add(new V3(.26,.3,0)));}
+    else{const mid=a.clone().add(b).multiplyScalar(.5),dir=b.clone().sub(a),len=dir.length();dir.normalize();
+      if(curStep.arc)mid.y+=Math.min(.24*len,3);
+      else if(G.directed&&G.rev.has(e.v+'>'+e.u)){const p=new V3().crossVectors(dir,Y);if(p.lengthSq()<1e-4)p.set(1,0,0);p.normalize().multiplyScalar(.55);mid.add(p);}
+      cv=new THREE.QuadraticBezierCurve3(a.clone(),mid,b.clone());}
+    const L=ELAB[i];L.pos.copy(cv.getPoint(.5));L.pos.y+=e.u===e.v?.2:.28;L.text=curStep.edges[i].lab||'';L.el.textContent=L.text;L.el.className='elab s-'+st;
+    if(!renderer)return;
+    const R0=NODE_R+.05;let ta=walk(cv,a,0,.004,R0),tb=walk(cv,b,1,-.004,R0);
+    const mk=()=>new THREE.MeshStandardMaterial({color:S.c,emissive:S.c,emissiveIntensity:S.g||.15,roughness:.55,transparent:S.o<1,opacity:S.o});
+    if(G.directed){const Hh=.38,fwd=!curStep.flip,tipT=fwd?tb:ta,tip=cv.getPoint(tipT),baseT=walk(cv,tip,tipT,fwd?-.004:.004,Hh),base=cv.getPoint(baseT);
+      if(fwd)tb=baseT;else ta=baseT;
+      const cone=new THREE.Mesh(new THREE.ConeGeometry(Math.max(.13,S.r*2.1),Hh,18),mk());cone.position.copy(base).add(tip).multiplyScalar(.5);cone.quaternion.setFromUnitVectors(Y,tip.clone().sub(base).normalize());edgeGroup.add(cone);}
+    if(tb>ta)edgeGroup.add(new THREE.Mesh(new THREE.TubeGeometry(new Sub(cv,ta,tb),e.u===e.v?32:22,S.r,8,false),mk()));
+  });
+}
+function applyRoles(){
+  const f=(curStep&&curStep.focus)||{};
+  G.nodes.forEach(n=>{const o=NO[n.id];o.role=sel===n.id?'sel':(f.n&&f.n.includes(n.id))?'cur':(f.t&&f.t.includes(n.id))?'tgt':'none';
+    if(o.outline){const r=ROLE[o.role];o.outline.material.color.setHex(r.c);o.outline.material.opacity=r.o;o.outline.scale.setScalar(r.s);}});
+}
+const tmp=new V3();
+function placeLabels(){
+  const w=host.clientWidth,h=host.clientHeight;
+  G.nodes.forEach(n=>{const o=NO[n.id];tmp.copy(o.cur);tmp.y-=.6;tmp.project(camera);
+    if(tmp.z>1||tmp.z<-1){o.el.style.display='none';return;}o.el.style.display='';
+    o.el.style.transform=`translate(${((tmp.x+1)/2*w).toFixed(1)}px,${((1-tmp.y)/2*h).toFixed(1)}px) translate(-50%,0)`;o.el.style.zIndex=String(2000-Math.round(tmp.z*1000));});
+  ELAB.forEach(L=>{if(!L.text){L.el.style.display='none';return;}tmp.copy(L.pos).project(camera);if(tmp.z>1){L.el.style.display='none';return;}L.el.style.display='';
+    L.el.style.transform=`translate(${((tmp.x+1)/2*w).toFixed(1)}px,${((1-tmp.y)/2*h).toFixed(1)}px) translate(-50%,-50%)`;L.el.style.zIndex=String(1000-Math.round(tmp.z*900));});
+}
+function frame(now){
+  requestAnimationFrame(frame);
+  if(!G)return;
+  if(anim){const k=Math.min(1,(now-anim.t0)/anim.dur),e=k<.5?4*k*k*k:1-Math.pow(-2*k+2,3)/2;
+    G.nodes.forEach(n=>{const o=NO[n.id];o.cur.lerpVectors(o.from,o.to,e);o.mesh.position.copy(o.cur);o.outline.position.copy(o.cur);});rebuildEdges();if(k>=1)anim=null;}
+  if(spin&&!drag&&now-lastTouch>3500)cam.theta+=.0016;
+  cam.t.lerp(cam.gT,.07);cam.r+=(cam.gR-cam.r)*.08;
+  if(!reduce)G.nodes.forEach(n=>{const o=NO[n.id];if(o.role==='cur')o.outline.scale.setScalar(1.24+.06*Math.sin(now/170));});
+  camera.position.set(cam.t.x+cam.r*Math.sin(cam.phi)*Math.sin(cam.theta),cam.t.y+cam.r*Math.cos(cam.phi),cam.t.z+cam.r*Math.sin(cam.phi)*Math.cos(cam.theta));
+  camera.lookAt(cam.t);
+  renderer.render(scene,camera);placeLabels();
+}
+
+/* ---------- UI ---------- */
+function renderRail(){
+  const groups=[...new Set(MODS.map(m=>m.group))];
+  $('#rail').innerHTML=groups.map(g=>`<div class="grp"><h5>${g}</h5><div>${MODS.filter(m=>m.group===g).map(m=>`<button data-mod="${m.id}" aria-current="${mod&&mod.id===m.id}">${m.name}<small>${m.short}</small></button>`).join('')}</div></div>`).join('');
+  $('#rail').querySelectorAll('button').forEach(b=>b.onclick=()=>{location.hash=b.dataset.mod;});
+}
+function renderLesson(){
+  const k=MODS.indexOf(mod)+1,ex=mod.examples[exIdx];
+  $('#lesson').innerHTML=`<div class="eyebrow">${mod.group} · Module ${k} of ${MODS.length}</div><h1>${mod.name}</h1><p class="idea">${mod.idea}</p>
+  <div class="facts">${mod.facts.map(([a,b])=>`<div class="fact"><span>${a}</span><b>${b}</b></div>`).join('')}</div>
+  <div class="exs"><span>Example</span>${mod.examples.map((e,j)=>`<button data-ex="${j}" aria-pressed="${j===exIdx}">${e.name}</button>`).join('')}</div>
+  <p class="exnote">${ex.note||''}</p>`;
+  $('#lesson').querySelectorAll('[data-ex]').forEach(b=>b.onclick=()=>load(mod.id,+b.dataset.ex));
+  $('#keys').innerHTML=mod.takeaways.map(t=>`<li>${t}</li>`).join('');
+  $('#traps').innerHTML=mod.traps.map(t=>`<li>${t}</li>`).join('');
+  $('#legend').innerHTML=mod.legend.map(([kind,key,label])=>{
+    const sw=kind==='n'?`<i class="nd" style="background:${fillCss(key)}"></i>`:kind==='e'?`<i class="ln" style="background:${hexCss((EST[key]||EST.idle).c)}"></i>`:`<i class="rg" style="border-color:${hexCss(ROLE[key].c)}"></i>`;
+    return `<span class="lg">${sw}${label}</span>`;}).join('');
+  if(!mod.code){$('#codeH').textContent='Cost comparison';$('#code').innerHTML=`<table class="cmp"><thead><tr><th></th><th>Adj. list</th><th>Adj. matrix</th></tr></thead><tbody>
+    <tr><td>Memory</td><td><b>Θ(V + E)</b></td><td><b>Θ(V²)</b></td></tr><tr><td>List neighbors of u</td><td><b>Θ(deg u)</b></td><td><b>Θ(V)</b></td></tr>
+    <tr><td>Is (u, v) an edge?</td><td><b>O(deg u)</b></td><td><b>Θ(1)</b></td></tr><tr><td>Edges into v</td><td><b>Θ(V + E)</b></td><td><b>Θ(V)</b></td></tr>
+    <tr><td>BFS / DFS</td><td><b>Θ(V + E)</b></td><td><b>Θ(V²)</b></td></tr><tr><td>Best for</td><td>sparse graphs</td><td>dense graphs</td></tr></tbody></table>`;return;}
+  $('#codeH').textContent='Pseudocode';let n=0;
+  $('#code').innerHTML=mod.code.map(l=>{if(l.startsWith('§'))return `<div class="cl hd">${esc(l.slice(1))}</div>`;n++;
+    let t=esc(l),cm='';const ci=t.indexOf('//');if(ci>=0){cm=`<span class="cm">${t.slice(ci)}</span>`;t=t.slice(0,ci);}
+    t=t.replace(/\b(for|each|if|else|while|return|to|in|call)\b/g,'<span class="kw">$1</span>');
+    return `<div class="cl" data-l="${n}"><span class="ln">${n}</span><span>${t}${cm}</span></div>`;}).join('');
+}
+function hlCode(line){
+  const set=new Set([].concat(line==null?[]:line));const box=$('#code');let firstEl=null;
+  box.querySelectorAll('.cl[data-l]').forEach(el=>{const on=set.has(+el.dataset.l);el.classList.toggle('on',on);if(on&&!firstEl)firstEl=el;});
+  if(firstEl){const top=firstEl.offsetTop,bot=top+firstEl.offsetHeight;if(top<box.scrollTop||bot>box.scrollTop+box.clientHeight)box.scrollTop=Math.max(0,top-40);}
+}
+function askHTML(a,ans){
+  const opts=a.opts.map(o=>{let cls='opt';if(ans){if(o===a.ans)cls+=' right';else if(o===ans)cls+=' wrong';}return `<button class="${cls}" data-o="${esc(o)}"${ans?' disabled':''}>${esc(o)}</button>`;}).join('');
+  const fb=ans?`<p class="fb">${ans===a.ans?'<b class="ok">Correct.</b>':`<b class="no">Not quite.</b> The answer is <b>${esc(a.ans)}</b>.`} ${a.why||''}</p>`:'<p class="ask-hint">Answer to unlock Next, or switch off “Quiz me”.</p>';
+  return `<div class="ask" id="ask"><div class="ask-h">Predict the next step</div><p class="q">${a.q}</p><div class="opts">${opts}</div>${fb}</div>`;
+}
+function renderNarr(){
+  const s=steps[idx];
+  let h=`<div class="nmeta"><span>Step ${idx+1} of ${steps.length}</span>${s.phase?`<span class="phase">${s.phase}</span>`:''}</div><h3>${s.title||''}</h3><p>${s.msg||''}</p>`;
+  if(s.why)h+=`<div class="why"><b class="wl">Why it works</b>${s.why}</div>`;
+  if(quiz&&s.ask)h+=askHTML(s.ask,answered[idx]);
+  $('#narr').innerHTML=h;
+  $('#narr').querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(answered[idx])return;answered[idx]=b.dataset.o;score.t++;if(b.dataset.o===s.ask.ans)score.c++;renderScore();renderNarr();updButtons();});
+}
+function renderScore(){$('#score').innerHTML=`Quiz <b>${score.c}</b> / ${score.t} correct`;}
+function blocked(){const s=steps[idx];return quiz&&s.ask&&!answered[idx];}
+function updButtons(){
+  $('#bPrev').disabled=idx===0;$('#bFirst').disabled=idx===0;$('#bNext').disabled=idx>=steps.length-1;
+  $('#scrub').max=steps.length-1;$('#scrub').value=idx;$('#stepct').textContent=`${idx+1} / ${steps.length}`;
+  $('#bPlay').textContent=timer?'❚❚ Pause':'▶ Play';
+}
+function show(i,instant){
+  idx=Math.max(0,Math.min(steps.length-1,i));const s=steps[idx];curStep=s;
+  let moving=false;
+  G.nodes.forEach(n=>{const o=NO[n.id],ns=s.nodes[n.id];
+    if(o.mesh)o.mesh.material.color.setHex(fillHex(ns.fill));
+    o.sub.textContent=ns.sub||'';o.sub.hidden=!ns.sub;
+    const p=s.pos&&s.pos[n.id]?s.pos[n.id]:n.p;o.to.set(p[0],p[1],p[2]);if(o.cur.distanceTo(o.to)>1e-3)moving=true;});
+  if(moving){
+    if(instant||reduce||!renderer){G.nodes.forEach(n=>{const o=NO[n.id];o.cur.copy(o.to);if(o.mesh){o.mesh.position.copy(o.cur);o.outline.position.copy(o.cur);}});}
+    else{G.nodes.forEach(n=>NO[n.id].from.copy(NO[n.id].cur));anim={t0:performance.now(),dur:1000};}
+    fit(n=>NO[n.id].to.clone(),false);
+  }
+  applyRoles();rebuildEdges();
+  renderNarr();hlCode(s.line);$('#panel').innerHTML=s.panel||'';markSel();updButtons();
+}
+function next(){if(idx>=steps.length-1)return false;if(blocked()){const a=$('#ask');if(a){a.classList.remove('shake');void a.offsetWidth;a.classList.add('shake');}return false;}show(idx+1);return true;}
+function stop(){if(timer){clearInterval(timer);timer=null;}updButtons();}
+function play(){if(timer){stop();return;}if(idx>=steps.length-1)show(0);timer=setInterval(()=>{if(!next())stop();},+$('#speed').value);updButtons();}
+function load(id,ex){
+  stop();mod=MODS.find(m=>m.id===id)||MODS[0];exIdx=Math.min(ex||0,mod.examples.length-1);
+  G=mkGraph(mod.examples[exIdx].g);steps=mod.run(G);answered={};sel=null;
+  renderRail();renderLesson();buildScene();
+  cam.theta=.55;cam.phi=1.13;fit(n=>new V3(...n.p),true);
+  show(0,true);
+}
+
+/* ---------- wiring ---------- */
+$('#bNext').onclick=()=>{stop();next();};
+$('#bPrev').onclick=()=>{stop();show(idx-1);};
+$('#bFirst').onclick=()=>{stop();show(0,true);};
+$('#bPlay').onclick=play;
+$('#scrub').oninput=e=>{stop();show(+e.target.value);};
+$('#speed').onchange=()=>{if(timer){stop();play();}};
+$('#quiz').checked=quiz;
+$('#quiz').onchange=e=>{quiz=e.target.checked;store.set('gal-quiz',quiz);renderNarr();};
+$('#zin').onclick=()=>{cam.gR=Math.max(5,cam.gR*.82);};
+$('#zout').onclick=()=>{cam.gR=Math.min(70,cam.gR*1.22);};
+$('#vreset').onclick=()=>{cam.theta=.55;cam.phi=1.13;fit(n=>NO[n.id].to.clone(),false);};
+const sp=$('#vspin');sp.setAttribute('aria-pressed',String(spin));sp.onclick=()=>{spin=!spin;sp.setAttribute('aria-pressed',String(spin));};
+$('#panel').addEventListener('click',e=>{const t=e.target.closest('[data-node]');if(t&&t.dataset.node)setSel(t.dataset.node);});
+document.addEventListener('keydown',e=>{if(e.target.closest('input,select,textarea')||e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.key==='ArrowRight'){e.preventDefault();stop();next();}else if(e.key==='ArrowLeft'){e.preventDefault();stop();show(idx-1);}else if(e.key===' '&&!e.target.closest('button')){e.preventDefault();play();}else if(e.key==='Home'){stop();show(0,true);}});
+const route=()=>{const h=location.hash.slice(1);load(MODS.some(m=>m.id===h)?h:'rep',0);};
+window.addEventListener('hashchange',route);
+renderScore();initThree();route();
+})();
+</script>
+</body>
+</html>
